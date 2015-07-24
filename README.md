@@ -30,13 +30,18 @@ This program was tested on a linux machine.
 
 ##How does it work:
 
-This program finds all genebank files (mitogenomes) in a folder and saves, in a multifasta file, each gene that is present in all mitogenomes. These files are aligned with CLUSTALW and the alignment is concatenated in a single file (`all_aa.aln`, by default) that contains all aligned genes from all mitogenomes. The file is  Phyml uses this file to generate a Maximum Likelihood tree.
+This program finds all genebank files (mitogenomes) in a folder and saves, in a multifasta file, each gene that is present in all mitogenomes. 
+These files are aligned with CLUSTALW and the alignment is concatenated in a single file (`all_nuc.aln`, by default) that contains all aligned genes from all mitogenomes. 
+Phyml uses this file to generate a Maximum Likelihood tree.
  
 ##Advanced features:
 
 * You can generate an amino acid alignment and phylogeny using the -p (or --protein) flag. The default is nucleotidic alignment and phylogeny.
-* Running the program with the -g (or --gene_tree) flag will generate a tree for every gene. Using this along with -d (or --dloop) to generate a tree of the DLOOP region. The supermatrix tree will also include this region. Do not use the -d flag with the -p flag, as it will translate the DLOOP region, generating giberish.
-* Default number of bootstap resamples is 100. You can change this with the -b (or --bootstrap) flag. Changing this will affect how long it takes to run the phylogeny.
+* Running the program with the -g (or --gene_tree) flag will generate a tree for every gene. 
+* Using -g along with -d (or --dloop) will generate a tree of the DLOOP region. 
+The supermatrix tree will also include this region. Do not use the -d flag with the -p flag, as it will translate the DLOOP region, generating giberish.
+* Default number of bootstap resamples is 100. You can change this with the -b (or --bootstrap) flag. 
+Changing this will affect how long it takes to run the phylogeny.
 
 ##Commom errors:
 
