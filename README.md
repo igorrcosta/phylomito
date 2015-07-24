@@ -10,9 +10,9 @@ usage: phylomito.py [-h] -i [INPATH] [-o [OUTPATH]]
 
 ```
 
-This program is licenced under GPLv3.
+This program is licensed under GPLv3.
 
-##Quickstart:
+##Quick start:
 
 * Save your genebank files in a folder (for example, ./genebank/) and create a folder for the output (./output/). 
 * Make sure your genebank files have the extension '.gbk' or '.gb'.
@@ -26,7 +26,7 @@ python phylomito.py -i ./genebank/ -o ./outpath/
 
 You need to install [PhyML](http://www.atgc-montpellier.fr/phyml/binaries.php), [CLUSTALW](http://www.clustal.org/download/current/), [python 2.7](https://www.python.org/downloads/release/python-2710/) and the [Biopython library](http://biopython.org/wiki/Download) to run this program.
 
-This program was tested on a linux machine.
+This program was tested on a Linux machine.
 
 ##How does it work:
 
@@ -39,13 +39,13 @@ Phyml uses this file to generate a Maximum Likelihood tree.
 * You can generate an amino acid alignment and phylogeny using the -p (or --protein) flag. The default is nucleotidic alignment and phylogeny.
 * Running the program with the -g (or --gene_tree) flag will generate a tree for every gene. 
 * Using -g along with -d (or --dloop) will generate a tree of the DLOOP region. 
-The supermatrix tree will also include this region. Do not use the -d flag with the -p flag, as it will translate the DLOOP region, generating giberish.
-* Default number of bootstap resamples is 100. You can change this with the -b (or --bootstrap) flag. 
+The supermatrix tree will also include this region. Do not use the -d flag with the -p flag, as it will translate the DLOOP region, generating gibberish.
+* Default number of bootstrap resamples is 100. You can change this with the -b (or --bootstrap) flag. 
 Changing this will affect how long it takes to run the phylogeny.
 
-##Commom errors:
+##Common errors:
 
-The most commom problem during your run is a genebank file with bad format. The error will look like this:
+The most common problem during your run is a genebank file with bad format. The error will look like this:
 
 ```
 mitochondria1.gb
@@ -54,15 +54,15 @@ mitochondria3.gb
 COX_1 is not a known gene. Replace the CDS gene id with one of the following:
 ND1  ND2  COX1  COX2  ATP8  ATP6  ND3  ND4L  ND4  ND5  CYTB  ND6  COX3
 Traceback (most recent call last):
-  File "/home/igor/phylomito/phylomito.py", line 315, in <module>
+  File "/path/phylomito/phylomito.py", line 315, in <module>
     main(args)
-  File "/home/igor/phylomito/phylomito.py", line 70, in main
+  File "/path/phylomito/phylomito.py", line 70, in main
     split_seqs(inpath, outpath, protein, extension, dloop)
-  File "/home/igor/phylomito/phylomito.py", line 140, in split_seqs
+  File "/path/phylomito/phylomito.py", line 140, in split_seqs
     gene_key = gene_dict[header]
 KeyError: 'COX_1'
 ```
 
 Where `mitochondria3.gb` is the file where the error was found.
-In this case the solution is to edit your file and replace all occurences of `COX_1` with `COX1`.
+In this case the solution is to edit your file and replace all occurrences of `COX_1` with `COX1`.
 
