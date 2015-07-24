@@ -45,7 +45,7 @@ Changing this will affect how long it takes to run the phylogeny.
 
 ##Common errors:
 
-The most common problem during your run is a genebank file with bad format. The error will look like this:
+The most common problem is bad formatted genebank files. The error will look like this:
 
 ```
 mitochondria1.gb
