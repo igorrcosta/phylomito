@@ -2,38 +2,15 @@ phylomito
 ===========
 
 A python script for mitochondrial supermatrix phylogenomics.
+
 ```
 usage: phylomito.py [-h] -i [INPATH] [-o [OUTPATH]]
                     [-e [EXTENSION [EXTENSION ...]]] [-b [BOOTSTRAP]]
                     [-p [PROTEIN]] [-g [GENE_TREE]] [-d [DLOOP]]
 
-Phylomito is a simple pipeline to automatize mitochondrial super-matrix
-phylogenomic, using clustaw, phyML and mrbayes.
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -i [INPATH], --inpath [INPATH]
-                        Path to the folder with genbank sequences. (default:
-                        None)
-  -o [OUTPATH], --outpath [OUTPATH]
-                        Path were the alignments and phylogenetic tree will be
-                        saved. (default: /home/igor/phylomito/)
-  -e [EXTENSION [EXTENSION ...]], --extension [EXTENSION [EXTENSION ...]]
-                        Extension for the genbank files. (default: ['.gbk',
-                        '.gb'])
-  -b [BOOTSTRAP], --bootstrap [BOOTSTRAP]
-                        Number of bootstrap repetitions on PhyML. (default:
-                        100)
-  -p [PROTEIN], --protein [PROTEIN]
-                        Set this flag for protein sequences alignment and
-                        phylogeny. (default: False)
-  -g [GENE_TREE], --gene_tree [GENE_TREE]
-                        Set this flag if you want to make a tree for every
-                        gene. (default: False)
-  -d [DLOOP], --dloop [DLOOP]
-                        Flag to include DLOOP region in the alignment.
-                        (default: False)
 ```
+
+This program is licenced under GPLv3.
 
 ##Quickstart:
 
