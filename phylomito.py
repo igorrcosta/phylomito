@@ -39,7 +39,7 @@ def argument_parser(hlp = False):
                         dest = 'outpath', help = 'Path were the alignments and phylogenetic tree will be saved. (default: %(default)s)')
     parser.add_argument('-e', '--extension', nargs = '*', type = str, default = ['.gbk', '.gb'],\
                         dest = 'extension', help = 'Extension for the genbank files. (default: %(default)s)')
-    parser.add_argument('-b', '--bootstrap', nargs = '?', type = int, default = 101 ,\
+    parser.add_argument('-b', '--bootstrap', nargs = '?', type = int, default = 100 ,\
                         dest = 'bootstrap', help = 'Number of bootstrap repetitions on PhyML. (default: %(default)s)')
     parser.add_argument('-p', '--protein', nargs = '?', const = True, default = False,\
                         dest = 'protein', help = 'Set this flag for protein sequences alignment and phylogeny. (default: %(default)s)')
