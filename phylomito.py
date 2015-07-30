@@ -54,6 +54,7 @@ def argument_parser(hlp = False):
     return args
 
 def main(args):
+    #Args processing.
     protein = args['protein']
     inpath = args['inpath']
     skip_phyml = False
@@ -67,36 +68,28 @@ def main(args):
     bootstrap = str(args['bootstrap'])
     if not dloop:
         known_genes.remove('DLOOP')
-    split_seqs(inpath, outpath, protein, extension, dloop)
-    run_clustalw(outpath, protein)
-    join_seqs(outpath, protein)
-    if protein:
-        fastatophy(outpath + 'all_aa.aln', outpath + 'all_aa.phy')
-        fastatophy(outpath + 'all_aa.aln', outpath + 'all_aa.nex', 'fasta', 'nexus')
-    else:
-        fastatophy(outpath + 'all_nuc.aln', outpath + 'all_nuc.phy')
-        fastatophy(outpath + 'all_nuc.aln', outpath + 'all_nuc.nex', 'fasta', 'nexus', protein = False)
-    command_nuc = 'phyml -m GTR -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i ' + outpath + 'all_nuc.phy'
-    command_aa = 'phyml -d aa -m JTT -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i ' + outpath + 'all_aa.phy'
     try:
         a = open(outpath + 'log_phyml.txt', 'w')
         a.close()
     except:
-       print 'Was not able to open log_phyml.txt. Check your permissions.'
-       skip_phyml = True
-    if skip_phyml:
-       print 'Skiping phylogeny.'
-       return None
+        print 'Was not able to open log_phyml.txt. Check your permissions.'
+        raise
+    #seqfile will be the file with the concatenated alignment.
+    if protein:
+	seqfile = outpath + 'all_aa'
+    	command = 'phyml -d aa -m JTT -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i ' + outpath + 'all_aa.phy'
     else:
-        with open(outpath + 'log_phyml.txt', 'a') as log:
-            if protein:
-                log.write(command_aa + '\n')
-                a = Popen(shlex.split(command_aa), stdout=log, stderr=log)
-                a.wait()
-            else:
-                log.write(command_nuc + '\n')
-                a = Popen(shlex.split(command_nuc), stdout=log, stderr=log)
-                a.wait()
+	seqfile = outpath + 'all_nuc'
+    	command = 'phyml -m GTR -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i ' + outpath + 'all_nuc.phy'
+    split_seqs(inpath, outpath, protein, extension, dloop) #Save each gene in a fasta file
+    run_clustalw(outpath, protein) #Align all fasta files
+    join_seqs(outpath, protein) #Concatenate all alignments
+    fastatophy(seqfile + '.aln', seqfile + '.phy') #Save alignments in phylip format for PhyML.
+    #fastatophy(seqfile + '.aln', seqfile + '.nex', 'fasta', 'nexus', protein=protein) #Save alignemnts in nexus format, for MrBayes. (not implemented yet)
+    with open(outpath + 'log_phyml.txt', 'a') as log:
+	log.write(command + '\n')
+	a = Popen(shlex.split(command), stdout=log, stderr=log)
+	a.wait()
     if args['gene_tree']:
         gene_tree(outpath, protein)
                 
@@ -111,20 +104,20 @@ def split_seqs(inpath, outpath, protein, extensions, dloop = False):
         print 'Less than 2 files found. Check your extension and inpath flags!'
         return 0
     size = 0
-    spec_dict = {}
+    sp_dict = {}
     for n, f in enumerate(mitos):
 	print f #genebank file
-        true_spec = ''
+        true_sp = ''
         try:
             i = SeqIO.read(inpath + f, 'genbank')
         except ValueError:
             print 'File', f, 'was not recognized. Check formating and genebank header.'
             raise
-        spec = str(n)
+        sp = str(n)
         for seq in i.features:
             if seq.type == 'source':
-                true_spec = '_'.join(seq.qualifiers['organism'][0].split())
-                spec_dict[spec] = true_spec
+                true_sp = '_'.join(seq.qualifiers['organism'][0].split())
+                sp_dict[sp] = true_sp
             if seq.type == 'CDS':
                 s = i[seq.location.start:seq.location.end].seq
                 if seq.strand == -1:
@@ -135,7 +128,7 @@ def split_seqs(inpath, outpath, protein, extensions, dloop = False):
                     header = seq.qualifiers['gene'][0].upper()
 		except:
 		    header = seq.qualifiers['product'][0].upper()
-                rec = SeqRecord(s, description = '', id = spec + '_' + header)
+                rec = SeqRecord(s, description = '', id = sp + '_' + header)
                 try:
                     gene_key = gene_dict[header]
 		    seq_dic[gene_key].append(rec)
@@ -150,10 +143,10 @@ def split_seqs(inpath, outpath, protein, extensions, dloop = False):
                 if seq.strand == -1:
                     s = s.reverse_complement()
                 header = 'DLOOP'
-                rec = SeqRecord(s, description = '', id = spec + '_' + header)
+                rec = SeqRecord(s, description = '', id = sp + '_' + header)
                 seq_dic[header].append(rec)
                 size += len(s)
-        if not true_spec:
+        if not true_sp:
             print 'File', f, 'has no source feature!' 
         size = 0
 
@@ -167,9 +160,9 @@ def split_seqs(inpath, outpath, protein, extensions, dloop = False):
         a = open(outpath + i + '.fasta', 'w')
         a.close()
         SeqIO.write(seq_dic[i], outpath + i + '.fasta', 'fasta')
-    with open('species_code.txt', 'w') as spec_file:
-        for k in sorted(spec_dict.keys()):
-            spec_file.write(k + ' ' + spec_dict[k] + '\n')
+    with open('species_code.txt', 'w') as sp_file:
+        for k in sorted(sp_dict.keys()):
+            sp_file.write(k + ' ' + sp_dict[k] + '\n')
     
 def run_clustalw(outpath, protein = False):
 
@@ -204,23 +197,18 @@ def join_seqs(path, protein = False):
         end = '_aa.aln'
     else:
         end = '_nuc.aln'
-    spec_dic = {}
+    sp_dic = {} #Species dict, each mitogenome is one species.
     for f in os.listdir(path):
         if f.endswith(end):
             for seq in SeqIO.parse(path + f, 'fasta'):
-                spec = seq.description.split('_')[0]
-                if spec in spec_dic.keys():
-                    spec_dic[spec].seq = spec_dic[spec].seq + seq.seq
+                sp = seq.description.split('_')[0]
+                if sp in sp_dic.keys():
+                    sp_dic[sp].seq = sp_dic[sp].seq + seq.seq
                 else:
-                    spec_dic[spec] = SeqRecord(seq = Seq(str(seq.seq)), id = spec, description = '') #spec_dic = {especie1:str(gene1)+str(gene2), especie2: str(gene1)+str(gene2), ...}
-    if protein:
-        a = open(path + 'all_aa.aln', 'w')
-        a.close()
-        SeqIO.write(spec_dic.values(), path + 'all_aa.aln', 'fasta')
-    else:
-        a = open(path + 'all_nuc.aln', 'w')
-        a.close()
-        SeqIO.write(spec_dic.values(), path + 'all_nuc.aln', 'fasta')
+                    sp_dic[sp] = SeqRecord(seq = Seq(str(seq.seq)), id = sp, description = '') #sp_dic = {species1:str(gene1)+str(gene2), species2: str(gene1)+str(gene2), ...}
+    a = open(path + 'all' + end, 'w')
+    a.close()
+    SeqIO.write(sp_dic.values(), path + 'all' + end, 'fasta')
 
 def fastatophy(infile, outfile, format_in = 'fasta', format_out = 'phylip', protein = True):
     seq_records = []
