@@ -47,6 +47,8 @@ def argument_parser(hlp = False):
                         dest = 'gene_tree', help = 'Set this flag if you want to make a tree for every gene. (default: %(default)s)')
     parser.add_argument('-d', '--dloop', nargs = '?', const = True, default = False,\
                         dest = 'dloop', help = 'Flag to include DLOOP region in the alignment. (default: %(default)s)')
+    parser.add_argument('-t', '--code_table', nargs = '?', type = int, default = 2,\
+                        dest = 'code_table', help = 'Genetic table to be used for translation. Only matters if --protein flag is used. Default is Vertebrate Mitochondrial Code. See all tables at http://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi. (default: %(default)s)')
     if hlp:
         args = parser.parse_args(['-h'])
     else:
@@ -57,6 +59,7 @@ def main(args):
     #Args processing.
     protein = args['protein']
     inpath = args['inpath']
+    code_table = args['code_table']
     skip_phyml = False
     if not inpath.endswith('/'):
         inpath += '/'
@@ -66,6 +69,8 @@ def main(args):
     extension = args['extension']
     dloop = args['dloop']
     bootstrap = str(args['bootstrap'])
+    if code_table not in [2,3,4,5,9,13,14,16,21,22,23,24]: #All mitochondrial codes
+	print 'WARNING: Genetic code n.{} is not Mitochondial!'.format('code_table')
     if not dloop:
         known_genes.remove('DLOOP')
     try:
@@ -81,7 +86,7 @@ def main(args):
     else:
 	seqfile = outpath + 'all_nuc'
     	command = 'phyml -m GTR -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i ' + outpath + 'all_nuc.phy'
-    split_seqs(inpath, outpath, protein, extension, dloop) #Save each gene in a fasta file
+    split_seqs(inpath, outpath, protein, extension, code_table, dloop) #Save each gene in a fasta file
     run_clustalw(outpath, protein) #Align all fasta files
     join_seqs(outpath, protein) #Concatenate all alignments
     fastatophy(seqfile + '.aln', seqfile + '.phy') #Save alignments in phylip format for PhyML.
@@ -93,7 +98,7 @@ def main(args):
     if args['gene_tree']:
         gene_tree(outpath, protein)
                 
-def split_seqs(inpath, outpath, protein, extensions, dloop = False):
+def split_seqs(inpath, outpath, protein, extensions, table, dloop = False):
     'if protein, translates to mitochondrial protein'
     seq_dic = {gene:[] for gene in known_genes}
     mitos = []
@@ -123,7 +128,7 @@ def split_seqs(inpath, outpath, protein, extensions, dloop = False):
                 if seq.strand == -1:
                     s = s.reverse_complement()
                 if protein:
-                    s = s.translate(table="Vertebrate Mitochondrial")
+                    s = s.translate(table=table)
 		try:
                     header = seq.qualifiers['gene'][0].upper()
 		except:
