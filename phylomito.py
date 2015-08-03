@@ -143,7 +143,7 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop = False):
                         print g + ' ',
                     raise
                 size += len(s)
-            if seq.type == 'misc_feature' and not protein and dloop:
+            if (seq.type.lower() == 'd-loop' or seq.type.lower() == 'dloop') and not protein and dloop:
                 s = i[seq.location.start:seq.location.end].seq
                 if seq.strand == -1:
                     s = s.reverse_complement()
