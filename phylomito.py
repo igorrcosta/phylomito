@@ -186,7 +186,7 @@ def run_clustalw(outpath, protein = False):
             else:
                 command2 = 'clustalw -INFILE=' + fp +\
                           ' -ALIGN -TYPE=PROTEIN -OUTPUT=FASTA -OUTFILE=' + outpath + f.split('.')[0] + '_aa.aln'
-            with open(outpath+'log.txt', 'a') as log:
+            with open(outpath+'log_clustalw.txt', 'a') as log:
                 log.write(fp + ' ' + command + '\n')
                 try:
                     a = Popen(shlex.split(command), stdout=log, stderr=log)
