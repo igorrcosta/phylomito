@@ -128,7 +128,10 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop = False):
                 if seq.strand == -1:
                     s = s.reverse_complement()
                 if protein:
-                    s = s.translate(table=table)
+                    if 'translation' in seq.qualifiers:
+                        s = Seq(seq.qualifiers['translation'][0], IUPAC.protein)
+                    else:
+                        s = s.translate(table=table)
 		try:
                     header = seq.qualifiers['gene'][0].upper()
 		except:
