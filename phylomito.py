@@ -91,12 +91,12 @@ def main(args):
     join_seqs(outpath, protein) #Concatenate all alignments
     fastatophy(seqfile + '.aln', seqfile + '.phy') #Save alignments in phylip format for PhyML.
     #fastatophy(seqfile + '.aln', seqfile + '.nex', 'fasta', 'nexus', protein=protein) #Save alignemnts in nexus format, for MrBayes. (not implemented yet)
+    print 'Running command:', command
     with open(outpath + 'log_phyml.txt', 'a') as log:
-	log.write(command + '\n')
-	a = Popen(shlex.split(command), stdout=log, stderr=log)
-	a.wait()
+        a = Popen(shlex.split(command), stdout=log, stderr=log)
+        a.wait()
     if args['gene_tree']:
-        gene_tree(outpath, protein)
+        gene_tree(outpath, protein, bootstrap)
                 
 def split_seqs(inpath, outpath, protein, extensions, table, dloop = False):
     'if protein, translates to mitochondrial protein'
@@ -111,7 +111,7 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop = False):
     size = 0
     sp_dict = {}
     for n, f in enumerate(mitos):
-	print f #genebank file
+        print 'Reading genebank file:', f #genebank file
         true_sp = ''
         try:
             i = SeqIO.read(inpath + f, 'genbank')
@@ -192,13 +192,12 @@ def run_clustalw(outpath, protein = False):
             with open(outpath+'log_clustalw.txt', 'a') as log:
                 log.write(fp + ' ' + command + '\n')
                 try:
+                    print 'Running command:', command 
                     a = Popen(shlex.split(command), stdout=log, stderr=log)
                     a.wait()
-                    print command 
                 except:
                     a = Popen(shlex.split(command2), stdout=log, stderr=log)
                     a.wait()
-                    print command2
 
 def join_seqs(path, protein = False):
     if protein:
@@ -207,7 +206,7 @@ def join_seqs(path, protein = False):
         end = '_nuc.aln'
     sp_dic = {} #Species dict, each mitogenome is one species.
     for f in os.listdir(path):
-        if f.endswith(end):
+        if f.endswith(end) and 'all' not in f:
             for seq in SeqIO.parse(path + f, 'fasta'):
                 sp = seq.description.split('_')[0]
                 if sp in sp_dic.keys():
@@ -236,17 +235,17 @@ def fastatophy(infile, outfile, format_in = 'fasta', format_out = 'phylip', prot
             print 'Could not open file:', infile, '| Check your permissions.'
             raise
 
-def gene_tree(path, protein):
+def gene_tree(path, protein, bootstrap):
     aln_genes = [f for f in os.listdir(path) if ('.aln' in f and 'all' not in f and '.phy' not in f)]
     for f in aln_genes:
         if protein:
-            command = 'nohup phyml -d aa -m JTT -b 100 -v 0.0 -c 4 -a 4 -f m -i '
+            command = 'nohup phyml -d aa -m JTT -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i '
         else:
-            command = 'nohup phyml -m GTR -b 100 -v 0.0 -c 4 -a 4 -f m -i '
+            command = 'nohup phyml -m GTR -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i '
         fastatophy(path + f, path + ''.join(f.split('.')[:-1]) + '.phy')
         command = command + path + ''.join(f.split('.')[:-1]) + '.phy'
+        print 'Running command:', command
         with open(path + 'log_phyml.txt', 'a') as log:
-            log.write(command + '\n')
             a = Popen(shlex.split(command), stdout=log, stderr=log)
             a.wait()
 
@@ -264,8 +263,6 @@ def file_handler(aln_file, nuc_file, outfile, alphabet = 'Vertebrate Mitochondri
         for nuc in SeqIO.parse(nuc_file, 'fasta'):
             if nuc.id == aln.id:
                 out = bt(aln, nuc, alphabet)
-                if out == 0:
-                    print nuc.id, aln.id
                 out_seq = Seq(out, generic_dna)
                 out_rec.append(SeqRecord(out_seq, id = nuc.id.split('_')[0], description = nuc.description.split('_')[0]))
     SeqIO.write(out_rec, outfile, 'fasta')
@@ -278,7 +275,7 @@ def bt(aln, nuc, alphabet):
     gaps = 0
     bt_seq = ''
     if len(nucl_seq)%3 != 0:
-        print 'nucleotide sequence is not divisible by 3, removing excess nucleotides.'
+        print 'Nucleotide sequence is not divisible by 3, removing excess nucleotides.'
         nucl_seq = nucl_seq[:-(len(nucl_seq)%3)]
     if len(nucl_seq)/3 < len(str(prot_seq).replace('-', '')):
         print len(nucl_seq)/3, str(prot_seq).replace('-', '')
@@ -292,8 +289,10 @@ def bt(aln, nuc, alphabet):
             codon = nucl_seq[pos:pos+3]
             translated = codon.translate(table=alphabet)
             if aa != str(translated):
+                print 'Translation error!'
                 print 'aminoacid/position:', aa, n
                 print 'codon/translated', codon, translated
+                print nuc.id, aln.id
                 return 0
             else:
                 bt_seq += str(codon)
