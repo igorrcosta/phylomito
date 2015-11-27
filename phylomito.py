@@ -37,6 +37,8 @@ def argument_parser(hlp = False):
                         dest = 'inpath', help = 'Path to the folder with genbank sequences. (default: %(default)s)')
     parser.add_argument('-o', '--outpath', nargs = '?', type = str, default = default_out,\
                         dest = 'outpath', help = 'Path were the alignments and phylogenetic tree will be saved. (default: %(default)s)')
+    parser.add_argument('-l', '--log', nargs = '?', type = str, default = 'phyml.log',\
+                        dest = 'log', help = 'Log file. (default: %(default)s)')
     parser.add_argument('-e', '--extension', nargs = '*', type = str, default = ['.gbk', '.gb'],\
                         dest = 'extension', help = 'Extension for the genbank files. (default: %(default)s)')
     parser.add_argument('-b', '--bootstrap', nargs = '?', type = int, default = 100 ,\
@@ -60,6 +62,7 @@ def main(args):
     protein = args['protein']
     inpath = args['inpath']
     code_table = args['code_table']
+    log_file = args['log']
     skip_phyml = False
     if not inpath.endswith('/'):
         inpath += '/'
@@ -74,10 +77,10 @@ def main(args):
     if not dloop:
         known_genes.remove('DLOOP')
     try:
-        a = open(outpath + 'log_phyml.txt', 'w')
+        a = open(outpath + log_file, 'w')
         a.close()
     except:
-        print 'Was not able to open log_phyml.txt. Check your permissions.'
+        print 'Was not able to open {}. Check your permissions.'.format(outpath+log_file)
         raise
     #seqfile will be the file with the concatenated alignment.
     if protein:
@@ -92,11 +95,11 @@ def main(args):
     fastatophy(seqfile + '.aln', seqfile + '.phy') #Save alignments in phylip format for PhyML.
     #fastatophy(seqfile + '.aln', seqfile + '.nex', 'fasta', 'nexus', protein=protein) #Save alignemnts in nexus format, for MrBayes. (not implemented yet)
     print 'Running command:', command
-    with open(outpath + 'log_phyml.txt', 'a') as log:
+    with open(outpath + log_file, 'a') as log:
         a = Popen(shlex.split(command), stdout=log, stderr=log)
         a.wait()
     if args['gene_tree']:
-        gene_tree(outpath, protein, bootstrap)
+        gene_tree(outpath, protein, bootstrap, log_file)
                 
 def split_seqs(inpath, outpath, protein, extensions, table, dloop = False):
     'if protein, translates to mitochondrial protein'
@@ -235,7 +238,7 @@ def fastatophy(infile, outfile, format_in = 'fasta', format_out = 'phylip', prot
             print 'Could not open file:', infile, '| Check your permissions.'
             raise
 
-def gene_tree(path, protein, bootstrap):
+def gene_tree(path, protein, bootstrap, log_file):
     aln_genes = [f for f in os.listdir(path) if ('.aln' in f and 'all' not in f and '.phy' not in f)]
     for f in aln_genes:
         if protein:
@@ -245,7 +248,7 @@ def gene_tree(path, protein, bootstrap):
         fastatophy(path + f, path + ''.join(f.split('.')[:-1]) + '.phy')
         command = command + path + ''.join(f.split('.')[:-1]) + '.phy'
         print 'Running command:', command
-        with open(path + 'log_phyml.txt', 'a') as log:
+        with open(path + log_file, 'a') as log:
             a = Popen(shlex.split(command), stdout=log, stderr=log)
             a.wait()
 
