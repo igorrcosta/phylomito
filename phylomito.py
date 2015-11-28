@@ -73,7 +73,7 @@ def main(args):
     dloop = args['dloop']
     bootstrap = str(args['bootstrap'])
     if code_table not in [2,3,4,5,9,13,14,16,21,22,23,24]: #All mitochondrial codes
-	print 'WARNING: Genetic code n.{} is not Mitochondial!'.format('code_table')
+        print 'WARNING: Genetic code n.{} is not Mitochondial!'.format('code_table')
     if not dloop:
         known_genes.remove('DLOOP')
     try:
@@ -84,12 +84,12 @@ def main(args):
         raise
     #seqfile will be the file with the concatenated alignment.
     if protein:
-	seqfile = outpath + 'all_aa'
+        seqfile = outpath + 'all_aa'
     	command = 'phyml -d aa -m JTT -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i ' + outpath + 'all_aa.phy'
     else:
-	seqfile = outpath + 'all_nuc'
+        seqfile = outpath + 'all_nuc'
     	command = 'phyml -m GTR -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i ' + outpath + 'all_nuc.phy'
-    split_seqs(inpath, outpath, protein, extension, code_table, dloop) #Save each gene in a fasta file
+    sp_code = split_seqs(inpath, outpath, protein, extension, code_table, dloop) #Save each gene in a fasta file
     run_clustalw(outpath, protein) #Align all fasta files
     join_seqs(outpath, protein) #Concatenate all alignments
     fastatophy(seqfile + '.aln', seqfile + '.phy') #Save alignments in phylip format for PhyML.
@@ -99,7 +99,11 @@ def main(args):
         a = Popen(shlex.split(command), stdout=log, stderr=log)
         a.wait()
     if args['gene_tree']:
-        gene_tree(outpath, protein, bootstrap, log_file)
+        aln_genes = [f for f in os.listdir(outpath) if ('.aln' in f and 'all' not in f and '.phy' not in f)]
+        for gene_file in aln_genes:
+            tree_file = gene_tree(outpath + gene_file, protein, bootstrap, outpath + log_file)
+            final_tree = tree_file.replace('_phyml_tree.txt', '_final_tree.txt')
+            tree_code(tree_file, sp_code, final_tree)
                 
 def split_seqs(inpath, outpath, protein, extensions, table, dloop = False):
     'if protein, translates to mitochondrial protein'
@@ -174,6 +178,7 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop = False):
     with open('species_code.txt', 'w') as sp_file:
         for k in sorted(sp_dict.keys()):
             sp_file.write(k + ' ' + sp_dict[k] + '\n')
+    return sp_dict
     
 def run_clustalw(outpath, protein = False):
 
@@ -238,19 +243,21 @@ def fastatophy(infile, outfile, format_in = 'fasta', format_out = 'phylip', prot
             print 'Could not open file:', infile, '| Check your permissions.'
             raise
 
-def gene_tree(path, protein, bootstrap, log_file):
-    aln_genes = [f for f in os.listdir(path) if ('.aln' in f and 'all' not in f and '.phy' not in f)]
-    for f in aln_genes:
-        if protein:
-            command = 'nohup phyml -d aa -m JTT -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i '
-        else:
-            command = 'nohup phyml -m GTR -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i '
-        fastatophy(path + f, path + ''.join(f.split('.')[:-1]) + '.phy')
-        command = command + path + ''.join(f.split('.')[:-1]) + '.phy'
-        print 'Running command:', command
-        with open(path + log_file, 'a') as log:
-            a = Popen(shlex.split(command), stdout=log, stderr=log)
-            a.wait()
+def gene_tree(aln_file, protein, bootstrap, log_file):
+    
+    if protein:
+        command = 'nohup phyml -d aa -m JTT -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i '
+    else:
+        command = 'nohup phyml -m GTR -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i '
+    phy_file = ''.join(aln_file.split('.')[:-1]) + '.phy'
+    fastatophy(aln_file, phy_file)
+    command = command + phy_file
+    print 'Running command:', command
+    with open(log_file, 'a') as log:
+        a = Popen(shlex.split(command), stdout=log, stderr=log)
+        a.wait()
+    tree_file = phy_file + '_phyml_tree.txt'
+    return tree_file
 
 def remove_gap(aligned_fasta, outfile):
     with open(outfile, 'w') as o:
@@ -307,6 +314,16 @@ def run_bt_mito(path):
     for p in pairs:
         file_handler(p[0], p[1], p[2])
 
+def tree_code(tree_file, species_code, out_file):
+    t = open(tree_file, 'r') 
+    tree = t.read()[:-1]
+    t.close()
+    #print tree
+    for k in sorted(species_code.keys())[::-1]:
+        tree = tree.replace('(' + str(k), '(' + species_code[k])
+        tree = tree.replace(',' + str(k), ',' + species_code[k])
+    with open(out_file, 'w') as out:
+        out.write(tree)    
 
 if __name__ == '__main__':
     args = argument_parser()
