@@ -85,11 +85,11 @@ def main(args):
     #seqfile will be the file with the concatenated alignment.
     if protein:
         seqfile = outpath + 'all_aa'
-    	command = 'phyml -d aa -m JTT -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i ' + outpath + 'all_aa.phy'
+        command = 'phyml -d aa -m JTT -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i ' + outpath + 'all_aa.phy'
     else:
         seqfile = outpath + 'all_nuc'
-    	command = 'phyml -m GTR -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i ' + outpath + 'all_nuc.phy'
-    sp_code = split_seqs(inpath, outpath, protein, extension, code_table, dloop) #Save each gene in a fasta file
+        command = 'phyml -m GTR -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i ' + outpath + 'all_nuc.phy'
+    sp_list = split_seqs(inpath, outpath, protein, extension, code_table, dloop) #Save each gene in a fasta file
     run_clustalw(outpath, protein) #Align all fasta files
     join_seqs(outpath, protein) #Concatenate all alignments
     fastatophy(seqfile + '.aln', seqfile + '.phy') #Save alignments in phylip format for PhyML.
@@ -98,12 +98,14 @@ def main(args):
     with open(outpath + log_file, 'a') as log:
         a = Popen(shlex.split(command), stdout=log, stderr=log)
         a.wait()
+    tree_code(seqfile + '.phy_phyml_tree.txt', sp_list, seqfile + '.phy_final_tree.txt')
     if args['gene_tree']:
         aln_genes = [f for f in os.listdir(outpath) if ('.aln' in f and 'all' not in f and '.phy' not in f)]
         for gene_file in aln_genes:
+            print outpath+gene_file
             tree_file = gene_tree(outpath + gene_file, protein, bootstrap, outpath + log_file)
             final_tree = tree_file.replace('_phyml_tree.txt', '_final_tree.txt')
-            tree_code(tree_file, sp_code, final_tree)
+            tree_code(tree_file, sp_list, final_tree)
                 
 def split_seqs(inpath, outpath, protein, extensions, table, dloop = False):
     'if protein, translates to mitochondrial protein'
@@ -115,8 +117,9 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop = False):
     if len(mitos) < 2:
         print 'Less than 2 files found. Check your extension and inpath flags!'
         return 0
+    mitos.sort()
     size = 0
-    sp_dict = {}
+    sp_list = []
     for n, f in enumerate(mitos):
         print 'Reading genebank file:', f #genebank file
         true_sp = ''
@@ -129,7 +132,7 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop = False):
         for seq in i.features:
             if seq.type == 'source':
                 true_sp = '_'.join(seq.qualifiers['organism'][0].split())
-                sp_dict[sp] = true_sp
+                sp_list.append(true_sp)
             if seq.type == 'CDS':
                 s = i[seq.location.start:seq.location.end].seq
                 if seq.strand == -1:
@@ -139,20 +142,29 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop = False):
                         s = Seq(seq.qualifiers['translation'][0], IUPAC.protein)
                     else:
                         s = s.translate(table=table)
-		try:
+                try:
                     header = seq.qualifiers['gene'][0].upper()
-		except:
-		    header = seq.qualifiers['product'][0].upper()
+                except:
+                    header = seq.qualifiers['product'][0].upper()
                 rec = SeqRecord(s, description = '', id = sp + '_' + header)
                 try:
                     gene_key = gene_dict[header]
-		    seq_dic[gene_key].append(rec)
+                    seq_dic[gene_key].append(rec)
                 except:
                     print header + ' is not a known gene. Replace the CDS gene id with one of the following:'
                     for g in known_genes:
                         print g + ' ',
                     raise
                 size += len(s)
+            if seq.type == 'misc_feature' and not protein and dloop:
+                if 'control region' in seq.qualifiers.values()[0]:
+                    s = i[seq.location.start:seq.location.end].seq
+                    if seq.strand == -1:
+                        s = s.reverse_complement()
+                    header = 'DLOOP'
+                    rec = SeqRecord(s, description = '', id = sp + '_' + header)
+                    seq_dic[header].append(rec)
+                    size += len(s)
             if (seq.type.lower() == 'd-loop' or seq.type.lower() == 'dloop') and not protein and dloop:
                 s = i[seq.location.start:seq.location.end].seq
                 if seq.strand == -1:
@@ -176,15 +188,15 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop = False):
         a.close()
         SeqIO.write(seq_dic[i], outpath + i + '.fasta', 'fasta')
     with open('species_code.txt', 'w') as sp_file:
-        for k in sorted(sp_dict.keys()):
-            sp_file.write(k + ' ' + sp_dict[k] + '\n')
-    return sp_dict
+        for n, sp in enumerate(sp_list):
+            sp_file.write(str(n) + ' ' + sp + '\n')
+    return sp_list
     
 def run_clustalw(outpath, protein = False):
 
     for f in os.listdir(outpath):
         if f.endswith('.fasta'):
-	    fp = outpath + f
+            fp = outpath + f
             if not protein:
                 command = 'clustalw2 -INFILE=' + fp +\
                           ' -ALIGN -OUTPUT=FASTA -OUTFILE=' + outpath + f.split('.')[0] + '_nuc.aln'
@@ -249,7 +261,7 @@ def gene_tree(aln_file, protein, bootstrap, log_file):
         command = 'nohup phyml -d aa -m JTT -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i '
     else:
         command = 'nohup phyml -m GTR -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i '
-    phy_file = ''.join(aln_file.split('.')[:-1]) + '.phy'
+    phy_file = aln_file[:-4] + '.phy'
     fastatophy(aln_file, phy_file)
     command = command + phy_file
     print 'Running command:', command
@@ -314,14 +326,14 @@ def run_bt_mito(path):
     for p in pairs:
         file_handler(p[0], p[1], p[2])
 
-def tree_code(tree_file, species_code, out_file):
+def tree_code(tree_file, species_list, out_file):
     t = open(tree_file, 'r') 
     tree = t.read()[:-1]
     t.close()
     #print tree
-    for k in sorted(species_code.keys())[::-1]:
-        tree = tree.replace('(' + str(k), '(' + species_code[k])
-        tree = tree.replace(',' + str(k), ',' + species_code[k])
+    for k in reversed(range(len(species_list))):
+        tree = tree.replace('(' + str(k), '(' + species_list[k])
+        tree = tree.replace(',' + str(k), ',' + species_list[k])
     with open(out_file, 'w') as out:
         out.write(tree)    
 
