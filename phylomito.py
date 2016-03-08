@@ -10,47 +10,50 @@ __contact__ = 'igor.bioinfo@gmail.com'
 import os
 import shlex
 import argparse
-from pprint import pprint
 from subprocess import Popen
+from copy import deepcopy
 from Bio import SeqIO, AlignIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.Alphabet import IUPAC, generic_dna
 
 
-genes = [('ND1', 'NAD1'), ('ND2', 'NAD2'), ('COX1', 'CO1'), ('COX2', 'CO2'), ('ATP8', 'ATPase 8'), ('ATP6', 'ATPase 6'), ('ND3', 'NAD3'), ('ND4L', 'NAD4L'), ('ND4', 'NAD4'), ('ND5', 'NAD5'), ('CYTB', 'Cyt B', 'COB'), ('ND6', 'NAD6'), ('COX3', 'CO3'), ('DLOOP',)]
-known_genes = ['ND1', 'ND2', 'COX1', 'COX2', 'ATP8', 'ATP6', 'ND3', 'ND4L', 'ND4', 'ND5', 'CYTB', 'ND6', 'COX3', 'DLOOP']
-
-gene_dict = {}
-for n, gs in enumerate(genes):
+GENES = [('ND1', 'NAD1'), ('ND2', 'NAD2'), ('COX1', 'CO1'), ('COX2', 'CO2'),
+         ('ATP8', 'ATPase 8'), ('ATP6', 'ATPase 6'), ('ND3', 'NAD3'),
+         ('ND4L', 'NAD4L'), ('ND4', 'NAD4'), ('ND5', 'NAD5'),
+         ('CYTB', 'Cyt B', 'COB'), ('ND6', 'NAD6'), ('COX3', 'CO3'), ('DLOOP',)]
+KNOWN_GENES = ['ND1', 'ND2', 'COX1', 'COX2', 'ATP8', 'ATP6', 'ND3', 'ND4L',
+              'ND4', 'ND5', 'CYTB', 'ND6', 'COX3', 'DLOOP']
+GENE_DICT = {}
+for n, gs in enumerate(GENES):
     for g in gs:
-        gene_dict[g] = known_genes[n]
+        GENE_DICT[g] = KNOWN_GENES[n]
 
 def argument_parser(hlp = False):
     '''phylomito.py -i /path/to/genbank/ -p -o /path/to/output/
     Output default: current working directory.'''
 
     default_out = os.getcwd() + '/'
-    parser = argparse.ArgumentParser(description = 'Phylomito is a simple pipeline to automatize mitochondrial super-matrix phylogenomic, using clustaw, phyML and mrbayes.',\
+    parser = argparse.ArgumentParser(description='Phylomito is a simple pipeline to automatize mitochondrial super-matrix phylogenomic, using clustaw, phyML and mrbayes.',\
                                      argument_default = None, fromfile_prefix_chars = '@')
-    parser.add_argument('-i', '--inpath', nargs = '?', type = str, required = True,\
-                        dest = 'inpath', help = 'Path to the folder with genbank sequences. (default: %(default)s)')
-    parser.add_argument('-o', '--outpath', nargs = '?', type = str, default = default_out,\
-                        dest = 'outpath', help = 'Path were the alignments and phylogenetic tree will be saved. (default: %(default)s)')
-    parser.add_argument('-l', '--log', nargs = '?', type = str, default = 'phyml.log',\
-                        dest = 'log', help = 'Log file. (default: %(default)s)')
-    parser.add_argument('-e', '--extension', nargs = '*', type = str, default = ['.gbk', '.gb'],\
-                        dest = 'extension', help = 'Extension for the genbank files. (default: %(default)s)')
-    parser.add_argument('-b', '--bootstrap', nargs = '?', type = int, default = 100 ,\
-                        dest = 'bootstrap', help = 'Number of bootstrap repetitions on PhyML. (default: %(default)s)')
-    parser.add_argument('-p', '--protein', nargs = '?', const = True, default = False,\
-                        dest = 'protein', help = 'Set this flag for protein sequences alignment and phylogeny. (default: %(default)s)')
-    parser.add_argument('-g', '--gene_tree', nargs = '?', const = True, default = False,\
-                        dest = 'gene_tree', help = 'Set this flag if you want to make a tree for every gene. (default: %(default)s)')
-    parser.add_argument('-d', '--dloop', nargs = '?', const = True, default = False,\
-                        dest = 'dloop', help = 'Flag to include DLOOP region in the alignment. (default: %(default)s)')
-    parser.add_argument('-t', '--code_table', nargs = '?', type = int, default = 2,\
-                        dest = 'code_table', help = 'Genetic table to be used for translation. Only matters if --protein flag is used. Default is Vertebrate Mitochondrial Code. See all tables at http://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi. (default: %(default)s)')
+    parser.add_argument('-i', '--inpath', nargs='?', type=str, required=True,\
+                        dest='inpath', help='Path to the folder with genbank sequences. (default: %(default)s)')
+    parser.add_argument('-o', '--outpath', nargs='?', type=str, default=default_out,\
+                        dest='outpath', help='Path were the alignments and phylogenetic tree will be saved. (default: %(default)s)')
+    parser.add_argument('-l', '--log', nargs='?', type=str, default='phyml.log',\
+                        dest='log', help='Log file. (default: %(default)s)')
+    parser.add_argument('-e', '--extension', nargs='*', type=str, default=['.gbk', '.gb'],\
+                        dest='extension', help='Extension for the genbank files. (default: %(default)s)')
+    parser.add_argument('-b', '--bootstrap', nargs='?', type=int, default=100 ,\
+                        dest='bootstrap', help='Number of bootstrap repetitions on PhyML. (default: %(default)s)')
+    parser.add_argument('-p', '--protein', nargs='?', const=True, default=False,\
+                        dest='protein', help='Set this flag for protein sequences alignment and phylogeny. (default: %(default)s)')
+    parser.add_argument('-g', '--gene_tree', nargs='?', const=True, default=False,\
+                        dest='gene_tree', help='Set this flag if you want to make a tree for every gene. (default: %(default)s)')
+    parser.add_argument('-d', '--dloop', nargs='?', const=True, default=False,\
+                        dest='dloop', help='Flag to include DLOOP region in the alignment. (default: %(default)s)')
+    parser.add_argument('-t', '--code_table', nargs='?', type=int, default=2,\
+                        dest='code_table', help='Genetic table to be used for translation. Only matters if --protein flag is used. Default is Vertebrate Mitochondrial Code. See all tables at http://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi. (default: %(default)s)')
     if hlp:
         args = parser.parse_args(['-h'])
     else:
@@ -72,15 +75,15 @@ def main(args):
     extension = args['extension']
     dloop = args['dloop']
     bootstrap = str(args['bootstrap'])
-    if code_table not in [2,3,4,5,9,13,14,16,21,22,23,24]: #All mitochondrial codes
+    if code_table not in [2, 3, 4, 5, 9, 13, 14, 16, 21, 22, 23, 24]: #All mitochondrial codes
         print 'WARNING: Genetic code n.{} is not Mitochondial!'.format('code_table')
     if not dloop:
-        known_genes.remove('DLOOP')
+        KNOWN_GENES.remove('DLOOP')
     try:
         a = open(outpath + log_file, 'w')
         a.close()
     except:
-        print 'Was not able to open {}. Check your permissions.'.format(outpath+log_file)
+        print 'Was not able to open {}. Check your permissions.'.format(outpath + log_file)
         raise
     #seqfile will be the file with the concatenated alignment.
     if protein:
@@ -107,9 +110,9 @@ def main(args):
             final_tree = tree_file.replace('_phyml_tree.txt', '_final_tree.txt')
             tree_code(tree_file, sp_list, final_tree)
                 
-def split_seqs(inpath, outpath, protein, extensions, table, dloop = False):
+def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
     'if protein, translates to mitochondrial protein'
-    seq_dic = {gene:[] for gene in known_genes}
+    seq_dic = {gene:[] for gene in KNOWN_GENES}
     mitos = []
     for e in extensions:
         mits = [mit for mit in os.listdir(inpath) if mit.endswith(e)]
@@ -146,23 +149,24 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop = False):
                     header = seq.qualifiers['gene'][0].upper()
                 except:
                     header = seq.qualifiers['product'][0].upper()
-                rec = SeqRecord(s, description = '', id = sp + '_' + header)
+                rec = SeqRecord(s, description='', id=sp + '_' + header)
                 try:
-                    gene_key = gene_dict[header]
+                    gene_key = GENE_DICT[header]
                     seq_dic[gene_key].append(rec)
                 except:
                     print header + ' is not a known gene. Replace the CDS gene id with one of the following:'
-                    for g in known_genes:
+                    for g in KNOWN_GENES:
                         print g + ' ',
                     raise
                 size += len(s)
-            if seq.type == 'misc_feature' and not protein and dloop:
+            if seq.type == 'misc_feature' and dloop:
                 if 'control region' in seq.qualifiers.values()[0]:
+                    print 'oi'
                     s = i[seq.location.start:seq.location.end].seq
                     if seq.strand == -1:
                         s = s.reverse_complement()
                     header = 'DLOOP'
-                    rec = SeqRecord(s, description = '', id = sp + '_' + header)
+                    rec = SeqRecord(s, description='', id=sp + '_' + header)
                     seq_dic[header].append(rec)
                     size += len(s)
             if (seq.type.lower() == 'd-loop' or seq.type.lower() == 'dloop') and not protein and dloop:
@@ -180,7 +184,7 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop = False):
     for i in seq_dic:
         try:
             assert len(seq_dic[i]) >= len(mitos)
-        except:
+        except AssertionError:
             print 'Warning: {0}. This gene is not present in all genbank files.({1}/{2})'.format(i, len(seq_dic[i]), len(mitos))
             print 'Gene removed.'
             continue
@@ -192,7 +196,7 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop = False):
             sp_file.write(str(n) + ' ' + sp + '\n')
     return sp_list
     
-def run_clustalw(outpath, protein = False):
+def run_clustalw(outpath, protein=False):
 
     for f in os.listdir(outpath):
         if f.endswith('.fasta'):
@@ -219,7 +223,7 @@ def run_clustalw(outpath, protein = False):
                     a = Popen(shlex.split(command2), stdout=log, stderr=log)
                     a.wait()
 
-def join_seqs(path, protein = False):
+def join_seqs(path, protein=False):
     if protein:
         end = '_aa.aln'
     else:
@@ -237,7 +241,7 @@ def join_seqs(path, protein = False):
     a.close()
     SeqIO.write(sp_dic.values(), path + 'all' + end, 'fasta')
 
-def fastatophy(infile, outfile, format_in = 'fasta', format_out = 'phylip', protein = True):
+def fastatophy(infile, outfile, format_in='fasta', format_out='phylip', protein=True):
     seq_records = []
     with open(infile, 'r') as handle:
         i = SeqIO.parse(handle, format_in)
@@ -279,14 +283,14 @@ def remove_gap(aligned_fasta, outfile):
             else:
                 o.write(line)
 
-def file_handler(aln_file, nuc_file, outfile, alphabet = 'Vertebrate Mitochondrial'):
+def file_handler(aln_file, nuc_file, outfile, alphabet='Vertebrate Mitochondrial'):
     out_rec = []
     for aln in SeqIO.parse(aln_file, 'fasta'):
         for nuc in SeqIO.parse(nuc_file, 'fasta'):
             if nuc.id == aln.id:
                 out = bt(aln, nuc, alphabet)
                 out_seq = Seq(out, generic_dna)
-                out_rec.append(SeqRecord(out_seq, id = nuc.id.split('_')[0], description = nuc.description.split('_')[0]))
+                out_rec.append(SeqRecord(out_seq, id=nuc.id.split('_')[0], description=nuc.description.split('_')[0]))
     SeqIO.write(out_rec, outfile, 'fasta')
 
 
@@ -321,7 +325,12 @@ def bt(aln, nuc, alphabet):
     return bt_seq
 
 def run_bt_mito(path):
-    genes = ['ND1', 'ND2', 'COX1', 'COX2', 'ATP8', 'ATP6', 'ND4L', 'ND4', 'ND5', 'CYTB', 'ND6', 'COX3'] #sem o ND3!
+    genes = deepcopy(KNOWN_GENES)
+    gene.remove('ND3')
+    try:
+        gene.remove('DLOOP')
+    except ValueError:
+        pass
     pairs = [(gene + '_aa.aln', gene + '.fasta', gene + '_codon.aln') for gene in genes]
     for p in pairs:
         file_handler(p[0], p[1], p[2])
