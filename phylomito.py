@@ -123,6 +123,7 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
     mitos.sort()
     size = 0
     sp_list = []
+    present_genes = {gene:False for gene in KNOWN_GENES}
     for n, f in enumerate(mitos):
         print 'Reading genebank file:', f #genebank file
         true_sp = ''
@@ -153,6 +154,7 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
                 try:
                     gene_key = GENE_DICT[header]
                     seq_dic[gene_key].append(rec)
+                    present_genes[gene_key] = True
                 except:
                     print header + ' is not a known gene. Replace the CDS gene id with one of the following:'
                     for g in KNOWN_GENES:
@@ -180,7 +182,10 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
         if not true_sp:
             print 'File', f, 'has no source feature!' 
         size = 0
-
+    
+        for gene in present_genes:
+            if not present_genes[gene]:
+                print 'File ', f, ' is missing gene ', gene
     for i in seq_dic:
         try:
             assert len(seq_dic[i]) >= len(mitos)
