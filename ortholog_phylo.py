@@ -114,16 +114,16 @@ def run_clustalw(outpath, protein=False):
             print fp
             if not protein:
                 command = 'clustalw2 -INFILE=' + fp +\
-                          ' -ALIGN -OUTPUT=FASTA -OUTFILE=' + outpath + f.split('.')[0] + '_nuc.aln'
+                          ' -ALIGN -OUTPUT=FASTA -OUTFILE=' + outpath + '.'.join(f.split('.')[:-1]) + '_nuc.aln'
             else:
                 command = 'clustalw2 -INFILE=' + fp +\
-                          ' -ALIGN -TYPE=PROTEIN -OUTPUT=FASTA -OUTFILE=' + outpath + f.split('.')[0] + '_aa.aln'
+                          ' -ALIGN -TYPE=PROTEIN -OUTPUT=FASTA -OUTFILE=' + outpath + '.'.join(f.split('.')[:-1]) + '_aa.aln'
             if not protein:
                 command2 = 'clustalw -INFILE=' + fp +\
-                          ' -ALIGN -OUTPUT=FASTA -OUTFILE=' + outpath + f.split('.')[0] + '_nuc.aln'
+                          ' -ALIGN -OUTPUT=FASTA -OUTFILE=' + outpath + '.'.join(f.split('.')[:-1]) + '_nuc.aln'
             else:
                 command2 = 'clustalw -INFILE=' + fp +\
-                          ' -ALIGN -TYPE=PROTEIN -OUTPUT=FASTA -OUTFILE=' + outpath + f.split('.')[0] + '_aa.aln'
+                          ' -ALIGN -TYPE=PROTEIN -OUTPUT=FASTA -OUTFILE=' + outpath + '.'.join(f.split('.')[:-1]) + '_aa.aln'
             with open(outpath+'log_clustalw.txt', 'a') as log:
                 log.write(fp + ' ' + command + '\n')
                 try:
