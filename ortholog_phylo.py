@@ -25,7 +25,7 @@ def main(seq_file, genomes):
     outpath = os.getcwd() +'/'
     log_file = 'ortholog.log'
     protein = True
-    bootstrap = '0'
+    bootstrap = '100'
     try:
         a = open(outpath + log_file, 'w')
         a.close()
@@ -45,28 +45,13 @@ def main(seq_file, genomes):
         with open(outpath + log_file, 'a') as log:
             a = Popen(shlex.split(command), stdout=log, stderr=log)
             a.wait()
-    #seqfile will be the file with the concatenated alignment.
-    if protein:
-        seqfile = outpath + 'all_aa'
-        command = 'phyml -d aa -m JTT -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i ' + outpath + 'all_aa.phy'
-    else:
-        seqfile = outpath + 'all_nuc'
-        command = 'phyml -m GTR -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i ' + outpath + 'all_nuc.phy'
-    #join_seqs(outpath, protein) #Concatenate all alignments
-    #fastatophy(seqfile + '.aln', seqfile + '.phy') #Save alignments in phylip format for PhyML.
-    #fastatophy(seqfile + '.aln', seqfile + '.nex', 'fasta', 'nexus', protein=protein) #Save alignemnts in nexus format, for MrBayes. (not implemented yet)
-#    print 'Running command:', command
-#    with open(outpath + log_file, 'a') as log:
-#        a = Popen(shlex.split(command), stdout=log, stderr=log)
-#        a.wait()
-#    tree_code(seqfile + '.phy_phyml_tree.txt', sp_list, seqfile + '.phy_final_tree.txt')
-#    if args['gene_tree']:
-#        aln_genes = [f for f in os.listdir(outpath) if ('.aln' in f and 'all' not in f and '.phy' not in f)]
-#        for gene_file in aln_genes:
-#            print outpath+gene_file
-#            tree_file = gene_tree(outpath + gene_file, protein, bootstrap, outpath + log_file)
-#            final_tree = tree_file.replace('_phyml_tree.txt', '_final_tree.txt')
-#            tree_code(tree_file, sp_list, final_tree)
+    joined_file = join_seqs(outpath, protein) #Concatenate all alignments
+    #joined_file = 'all_aa.aln'
+    fastatophy(joined_file, joined_file + '.phy') #Save alignments in phylip format for PhyML.
+    command = 'phyml -d aa -m JTT -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i ' + joined_file + '.phy'
+    with open(outpath + log_file, 'a') as log:
+        a = Popen(shlex.split(command), stdout=log, stderr=log)
+        a.wait()
                 
 def parse_seqs(seq_file, genomes):
     seq_names = []
@@ -85,7 +70,7 @@ def separate_seqs(seq_names, genomes):
                 seq = find(seq_name, genome)
                 #print seq_name, seq[0]
                 #assert seq_name == seq[0]
-                header = '>'+seq_name
+                header = '>'+genome.split('/')[-1]
                 fasta_file.write(header + '\n' + seq[1] + '\n')
             file_names.append(s[0])
     return file_names
@@ -143,18 +128,18 @@ def join_seqs(path, protein=False):
     for f in os.listdir(path):
         if f.endswith(end) and 'all' not in f:
             for seq in SeqIO.parse(path + f, 'fasta'):
-                sp = seq.description.split('_')[0]
+                sp = seq.description[:4]
                 if sp in sp_dic.keys():
                     sp_dic[sp].seq = sp_dic[sp].seq + seq.seq
                 else:
                     sp_dic[sp] = SeqRecord(seq = Seq(str(seq.seq)), id = sp, description = '') #sp_dic = {species1:str(gene1)+str(gene2), species2: str(gene1)+str(gene2), ...}
-    a = open(path + 'all' + end, 'w')
+    outfile = path + 'all' + end
+    a = open(outfile, 'w')
     a.close()
-    SeqIO.write(sp_dic.values(), path + 'all' + end, 'fasta')
+    SeqIO.write(sp_dic.values(), outfile, 'fasta')
+    return outfile
 
 def fastatophy(infile, outfile, format_in='fasta', format_out='phylip', protein=True):
-    if 'all' in infile:
-        return
     seq_records = []
     with open(infile, 'r') as handle:
         i = SeqIO.parse(handle, format_in)
@@ -260,6 +245,7 @@ def tree_code(tree_file, species_list, out_file):
         out.write(tree)    
 
 if __name__ == '__main__':
-    main(sys.argv[1], sys.argv[2:])
+    #seq file is at /data2/Marcela/marcela.fasta.an/4genes.4taxa.no.gallo 
+    main(sys.argv[1], sys.argv[2:]) #seq_file, genomes
     #args = argument_parser()
     #main(args)
