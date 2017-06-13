@@ -1,0 +1,24 @@
+{% from "macros.html" import nav_link with context %}
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>phylomito</title>
+    <meta name="description" content="{% block description %}{% endblock %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="/opensans.css"> 
+    <link rel="stylesheet" type="text/css" href="/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="/styles.css">
+    <link rel="shortcut icon" href="/favicon.ico">
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <script src="/jquery.min.js"></script>
+    <script src="/bootstrap.min.js"></script>
+    {% include "navbar.html" %}
+    {% block content %} {% endblock %}
+    <!--{% include "footer.html" %}-->
+  </body>
+</html>

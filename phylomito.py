@@ -77,8 +77,6 @@ def main(args):
     bootstrap = str(args['bootstrap'])
     if code_table not in [2, 3, 4, 5, 9, 13, 14, 16, 21, 22, 23, 24]: #All mitochondrial codes
         print 'WARNING: Genetic code n.{} is not Mitochondial!'.format('code_table')
-    if not dloop:
-        KNOWN_GENES.remove('DLOOP')
     try:
         a = open(outpath + log_file, 'w')
         a.close()
@@ -112,7 +110,10 @@ def main(args):
                 
 def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
     'if protein, translates to mitochondrial protein'
-    seq_dic = {gene:[] for gene in KNOWN_GENES}
+    genes = deepcopy(KNOWN_GENES)
+    if not dloop:
+	genes.remove('DLOOP')
+    seq_dic = {gene:[] for gene in genes}
     mitos = []
     for e in extensions:
         mits = [mit for mit in os.listdir(inpath) if mit.endswith(e)]
@@ -123,7 +124,7 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
     mitos.sort()
     size = 0
     sp_list = []
-    present_genes = {gene:False for gene in KNOWN_GENES}
+    present_genes = {gene:False for gene in genes}
     for n, f in enumerate(mitos):
         print 'Reading genebank file:', f #genebank file
         true_sp = ''
@@ -157,13 +158,12 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
                     present_genes[gene_key] = True
                 except:
                     print header + ' is not a known gene. Replace the CDS gene id with one of the following:'
-                    for g in KNOWN_GENES:
+                    for g in genes:
                         print g + ' ',
                     raise
                 size += len(s)
             if seq.type == 'misc_feature' and dloop:
                 if 'control region' in seq.qualifiers.values()[0]:
-                    print 'oi'
                     s = i[seq.location.start:seq.location.end].seq
                     if seq.strand == -1:
                         s = s.reverse_complement()
