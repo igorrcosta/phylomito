@@ -50,6 +50,7 @@ def main(seq_file, genomes):
     fastatophy(joined_file, joined_file + '.phy') #Save alignments in phylip format for PhyML.
     command = 'phyml -d aa -m JTT -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i ' + joined_file + '.phy'
     with open(outpath + log_file, 'a') as log:
+        print 'Running command:', command 
         a = Popen(shlex.split(command), stdout=log, stderr=log)
         a.wait()
                 
@@ -143,7 +144,7 @@ def join_seqs(path, protein=False):
     for f in os.listdir(path):
         if f.endswith(end) and 'all' not in f:
             for seq in SeqIO.parse(path + f, 'fasta'):
-                sp = seq.description[:4]
+                sp = seq.description[:9]
                 if sp in sp_dic.keys():
                     sp_dic[sp].seq = sp_dic[sp].seq + seq.seq
                 else:
