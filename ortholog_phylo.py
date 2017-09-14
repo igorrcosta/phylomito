@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# prtolog_phylo.py
+# ortholog_phylo.py
 
-'''Ortologs phylogeny supermatrix method.'''
+'''Orthologs phylogeny supermatrix method.'''
 
 __author__ = 'Igor Rodrigues da Costa'
 __contact__ = 'igor.bioinfo@gmail.com'
 
 import os
+import sys
 import shlex
 import argparse
 from subprocess import Popen
@@ -19,78 +20,110 @@ from Bio.Alphabet import IUPAC, generic_dna
 
 
 
-def main(args):
+def main(seq_file, genomes):
     #Args processing.
+    outpath = os.getcwd() +'/'
+    log_file = 'ortholog.log'
+    protein = True
+    bootstrap = '100'
     try:
         a = open(outpath + log_file, 'w')
         a.close()
     except:
         print 'Was not able to open {}. Check your permissions.'.format(outpath + log_file)
         raise
-    #seqfile will be the file with the concatenated alignment.
-    if protein:
-        seqfile = outpath + 'all_aa'
-        command = 'phyml -d aa -m JTT -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i ' + outpath + 'all_aa.phy'
-    else:
-        seqfile = outpath + 'all_nuc'
-        command = 'phyml -m GTR -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i ' + outpath + 'all_nuc.phy'
-    sp_list = split_seqs(inpath, outpath, protein, extension, code_table, dloop) #Save each gene in a fasta file
+    seq_names = parse_seqs(seq_file, genomes)
+    file_names = separate_seqs(seq_names, genomes) #Save each gene in a fasta file
     run_clustalw(outpath, protein) #Align all fasta files
-    #join_seqs(outpath, protein) #Concatenate all alignments
-    fastatophy(seqfile + '.aln', seqfile + '.phy') #Save alignments in phylip format for PhyML.
-    #fastatophy(seqfile + '.aln', seqfile + '.nex', 'fasta', 'nexus', protein=protein) #Save alignemnts in nexus format, for MrBayes. (not implemented yet)
-    print 'Running command:', command
+    with open('file_names', 'w') as fn:
+        for f in file_names:
+            fn.write(f + '\n')
+#    for f in file_names:
+#        fastatophy(f + '_aa.aln', f + '.phy') #Save alignments in phylip format for PhyML.
+#        command = 'phyml -d aa -m JTT -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i ' + f + '.phy'
+#        print 'Running command:', command
+#        with open(outpath + log_file, 'a') as log:
+#            a = Popen(shlex.split(command), stdout=log, stderr=log)
+#            a.wait()
+    joined_file = join_seqs(outpath, protein) #Concatenate all alignments
+    #joined_file = 'all_aa.aln'
+    fastatophy(joined_file, joined_file + '.phy') #Save alignments in phylip format for PhyML.
+    command = 'phyml -d aa -m JTT -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i ' + joined_file + '.phy'
     with open(outpath + log_file, 'a') as log:
         a = Popen(shlex.split(command), stdout=log, stderr=log)
         a.wait()
-    tree_code(seqfile + '.phy_phyml_tree.txt', sp_list, seqfile + '.phy_final_tree.txt')
-    if args['gene_tree']:
-        aln_genes = [f for f in os.listdir(outpath) if ('.aln' in f and 'all' not in f and '.phy' not in f)]
-        for gene_file in aln_genes:
-            print outpath+gene_file
-            tree_file = gene_tree(outpath + gene_file, protein, bootstrap, outpath + log_file)
-            final_tree = tree_file.replace('_phyml_tree.txt', '_final_tree.txt')
-            tree_code(tree_file, sp_list, final_tree)
                 
-def separate_seqs(genomes, seq_names):
+def parse_seqs(seq_file, genomes):
+    seq_names = []
+    with open(seq_file, 'r') as ortho_file:
+        for l in ortho_file:
+            seq_ids = [s.split('(')[0] for s in l.split(':')[1].split()]
+            assert len(seq_ids) == len(genomes)
+            seq_names.append(seq_ids)
+    return seq_names
+
+def separate_seqs(seq_names, genomes):
+    file_names = []
     for s in seq_names:
-        with open(s[0] + '.fasta', 'w') as seq_file:
+        with open(s[0] + '.fasta', 'w') as fasta_file:
             for seq_name, genome in zip(s, genomes):
+                assert unique(seq_name, genome)
                 seq = find(seq_name, genome)
-                header = '>'+seq_name
-                seq_file.write(header + '/n' + seq + '/n')
+                #print seq_name, seq[0]
+                #assert seq_name == seq[0]
+                header = '>'+genome.split('/')[-1]
+                fasta_file.write(header + '\n' + seq[1] + '\n')
+            file_names.append(s[0])
+    return file_names
+
+def unique(seq_name, genome):
+    '''return the first sequence that contains seq_name on it's fasta ID'''
+    seq_id = ''
+    hits = 0
+    with open(genome, 'r') as f:
+        for seq_line in f:
+            if seq_line[0] == '>':
+                if seq_name in seq_id:
+                    hits += 1
+                seq_id = seq_line[1:-1]
+        if seq_name in seq_id:
+            hits += 1
+    return hits == 1
 
 def find(seq_name, genome):
+    '''return the first sequence that contains seq_name on it's fasta ID'''
     seq = ''
     seq_id = ''
-    for seq_line in f:
-        if seq_line[0] == '>':
-            if seq:
-	            yield seq_id, seq
-            seq_id = seq_line[1:-1]
-            seq = ''
-        else:
-            seq += seq_line[:-1]
-    if seq_id:
-	yield seq_id, seq
+    with open(genome, 'r') as f:
+        for seq_line in f:
+            if seq_line[0] == '>':
+                if seq and seq_name in seq_id:
+    	            return seq_id, seq
+                seq_id = seq_line[1:-1]
+                seq = ''
+            else:
+                seq += seq_line[:-1]
+        if seq_name in seq_id:
+            return seq_id, seq
             
 def run_clustalw(outpath, protein=False):
 
     for f in os.listdir(outpath):
         if f.endswith('.fasta'):
             fp = outpath + f
+            print fp
             if not protein:
                 command = 'clustalw2 -INFILE=' + fp +\
-                          ' -ALIGN -OUTPUT=FASTA -OUTFILE=' + outpath + f.split('.')[0] + '_nuc.aln'
+                          ' -ALIGN -OUTPUT=FASTA -OUTFILE=' + outpath + '.'.join(f.split('.')[:-1]) + '_nuc.aln'
             else:
                 command = 'clustalw2 -INFILE=' + fp +\
-                          ' -ALIGN -TYPE=PROTEIN -OUTPUT=FASTA -OUTFILE=' + outpath + f.split('.')[0] + '_aa.aln'
+                          ' -ALIGN -TYPE=PROTEIN -OUTPUT=FASTA -OUTFILE=' + outpath + '.'.join(f.split('.')[:-1]) + '_aa.aln'
             if not protein:
                 command2 = 'clustalw -INFILE=' + fp +\
-                          ' -ALIGN -OUTPUT=FASTA -OUTFILE=' + outpath + f.split('.')[0] + '_nuc.aln'
+                          ' -ALIGN -OUTPUT=FASTA -OUTFILE=' + outpath + '.'.join(f.split('.')[:-1]) + '_nuc.aln'
             else:
                 command2 = 'clustalw -INFILE=' + fp +\
-                          ' -ALIGN -TYPE=PROTEIN -OUTPUT=FASTA -OUTFILE=' + outpath + f.split('.')[0] + '_aa.aln'
+                          ' -ALIGN -TYPE=PROTEIN -OUTPUT=FASTA -OUTFILE=' + outpath + '.'.join(f.split('.')[:-1]) + '_aa.aln'
             with open(outpath+'log_clustalw.txt', 'a') as log:
                 log.write(fp + ' ' + command + '\n')
                 try:
@@ -110,14 +143,16 @@ def join_seqs(path, protein=False):
     for f in os.listdir(path):
         if f.endswith(end) and 'all' not in f:
             for seq in SeqIO.parse(path + f, 'fasta'):
-                sp = seq.description.split('_')[0]
+                sp = seq.description[:4]
                 if sp in sp_dic.keys():
                     sp_dic[sp].seq = sp_dic[sp].seq + seq.seq
                 else:
                     sp_dic[sp] = SeqRecord(seq = Seq(str(seq.seq)), id = sp, description = '') #sp_dic = {species1:str(gene1)+str(gene2), species2: str(gene1)+str(gene2), ...}
-    a = open(path + 'all' + end, 'w')
+    outfile = path + 'all' + end
+    a = open(outfile, 'w')
     a.close()
-    SeqIO.write(sp_dic.values(), path + 'all' + end, 'fasta')
+    SeqIO.write(sp_dic.values(), outfile, 'fasta')
+    return outfile
 
 def fastatophy(infile, outfile, format_in='fasta', format_out='phylip', protein=True):
     seq_records = []
@@ -225,5 +260,8 @@ def tree_code(tree_file, species_list, out_file):
         out.write(tree)    
 
 if __name__ == '__main__':
-    args = argument_parser()
-    main(args)
+    #seq file is at /data2/Marcela/marcela.fasta.an/4genes.4taxa.no.gallo 
+    main(sys.argv[1], sys.argv[2:]) #seq_file, genomes (genomes must be in the same order as presented in seq_file)
+    #args = argument_parser()
+    #main(args)
+
