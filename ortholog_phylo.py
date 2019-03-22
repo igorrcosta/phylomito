@@ -3,7 +3,13 @@
 # prtolog_phylo.py
 
 '''Orthologs phylogeny supermatrix method.'''
+from __future__ import print_function
+from __future__ import division
 
+from builtins import zip
+from builtins import str
+from builtins import range
+from past.utils import old_div
 __author__ = 'Igor Rodrigues da Costa'
 __contact__ = 'igor.bioinfo@gmail.com'
 
@@ -30,7 +36,7 @@ def main(seq_file, genomes):
         a = open(outpath + log_file, 'w')
         a.close()
     except:
-        print 'Was not able to open {}. Check your permissions.'.format(outpath + log_file)
+        print('Was not able to open {}. Check your permissions.'.format(outpath + log_file))
         raise
     seq_names = parse_seqs(seq_file, genomes)
     file_names = separate_seqs(seq_names, genomes) #Save each gene in a fasta file
@@ -41,7 +47,7 @@ def main(seq_file, genomes):
     for f in file_names:
         fastatophy(f + '_aa.aln', f + '.phy') #Save alignments in phylip format for PhyML.
         command = 'phyml -d aa -m JTT -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i ' + f + '.phy'
-        print 'Running command:', command
+        print('Running command:', command)
         with open(outpath + log_file, 'a') as log:
             a = Popen(shlex.split(command), stdout=log, stderr=log)
             a.wait()
@@ -96,7 +102,7 @@ def run_clustalw(outpath, protein=False):
     for f in os.listdir(outpath):
         if f.endswith('.fasta'):
             fp = outpath + f
-            print fp
+            print(fp)
             if not protein:
                 command = 'clustalw2 -INFILE=' + fp +\
                           ' -ALIGN -OUTPUT=FASTA -OUTFILE=' + outpath + '.'.join(f.split('.')[:-1]) + '_nuc.aln'
@@ -112,7 +118,7 @@ def run_clustalw(outpath, protein=False):
             with open(outpath+'log_clustalw.txt', 'a') as log:
                 log.write(fp + ' ' + command + '\n')
                 try:
-                    print 'Running command:', command 
+                    print('Running command:', command) 
                     a = Popen(shlex.split(command), stdout=log, stderr=log)
                     a.wait()
                 except:
@@ -129,14 +135,14 @@ def join_seqs(path, protein=False):
         if f.endswith(end) and 'all' not in f:
             for seq in SeqIO.parse(path + f, 'fasta'):
                 sp = seq.description[:4]
-                if sp in sp_dic.keys():
+                if sp in list(sp_dic.keys()):
                     sp_dic[sp].seq = sp_dic[sp].seq + seq.seq
                 else:
                     sp_dic[sp] = SeqRecord(seq = Seq(str(seq.seq)), id = sp, description = '') #sp_dic = {species1:str(gene1)+str(gene2), species2: str(gene1)+str(gene2), ...}
     outfile = path + 'all' + end
     a = open(outfile, 'w')
     a.close()
-    SeqIO.write(sp_dic.values(), outfile, 'fasta')
+    SeqIO.write(list(sp_dic.values()), outfile, 'fasta')
     return outfile
 
 def fastatophy(infile, outfile, format_in='fasta', format_out='phylip', protein=True):
@@ -154,7 +160,7 @@ def fastatophy(infile, outfile, format_in='fasta', format_out='phylip', protein=
         try:
             SeqIO.write(seq_records, out, format_out)
         except:
-            print 'Could not open file:', infile, '| Check your permissions.'
+            print('Could not open file:', infile, '| Check your permissions.')
             raise
 
 def gene_tree(aln_file, protein, bootstrap, log_file):
@@ -166,7 +172,7 @@ def gene_tree(aln_file, protein, bootstrap, log_file):
     phy_file = aln_file[:-4] + '.phy'
     fastatophy(aln_file, phy_file)
     command = command + phy_file
-    print 'Running command:', command
+    print('Running command:', command)
     with open(log_file, 'a') as log:
         a = Popen(shlex.split(command), stdout=log, stderr=log)
         a.wait()
@@ -199,10 +205,10 @@ def bt(aln, nuc, alphabet):
     gaps = 0
     bt_seq = ''
     if len(nucl_seq)%3 != 0:
-        print 'Nucleotide sequence is not divisible by 3, removing excess nucleotides.'
+        print('Nucleotide sequence is not divisible by 3, removing excess nucleotides.')
         nucl_seq = nucl_seq[:-(len(nucl_seq)%3)]
-    if len(nucl_seq)/3 < len(str(prot_seq).replace('-', '')):
-        print len(nucl_seq)/3, str(prot_seq).replace('-', '')
+    if old_div(len(nucl_seq),3) < len(str(prot_seq).replace('-', '')):
+        print(old_div(len(nucl_seq),3), str(prot_seq).replace('-', ''))
         raise ValueError('Nucleotide sequence is smaller than protein sequence times 3!')
     for n, aa in enumerate(list(prot_seq)):
         if aa == '-':
@@ -213,10 +219,10 @@ def bt(aln, nuc, alphabet):
             codon = nucl_seq[pos:pos+3]
             translated = codon.translate(table=alphabet)
             if aa != str(translated):
-                print 'Translation error!'
-                print 'aminoacid/position:', aa, n
-                print 'codon/translated', codon, translated
-                print nuc.id, aln.id
+                print('Translation error!')
+                print('aminoacid/position:', aa, n)
+                print('codon/translated', codon, translated)
+                print(nuc.id, aln.id)
                 return 0
             else:
                 bt_seq += str(codon)
@@ -238,7 +244,7 @@ def tree_code(tree_file, species_list, out_file):
     tree = t.read()[:-1]
     t.close()
     #print tree
-    for k in reversed(range(len(species_list))):
+    for k in reversed(list(range(len(species_list)))):
         tree = tree.replace('(' + str(k), '(' + species_list[k])
         tree = tree.replace(',' + str(k), ',' + species_list[k])
     with open(out_file, 'w') as out:

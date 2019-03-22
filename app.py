@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import str
 import os
 import datetime
 from flask import Flask, request, session, render_template, redirect, url_for, send_file, flash
@@ -16,7 +18,7 @@ IGNORED_FILES = set(['.gitignore'])
 default_args = {'log': 'phyml.log', 'extension': ['.gbk', '.gb'], 'bootstrap': 100, 'protein': False, 'gene_tree': False, 'dloop': False, 'code_table': 2}
 
 def allowed_file(filename):
-    print filename.rsplit('.', 1)[1].lower(), ALLOWED_EXTENSIONS
+    print(filename.rsplit('.', 1)[1].lower(), ALLOWED_EXTENSIONS)
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def gen_file_name(filename):
@@ -54,23 +56,23 @@ def template_root():
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
                 files.append(filename)
-		print 'saving'
+		print('saving')
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             else:
-                print 'file not allowed'
+                print('file not allowed')
             if len(files) > 1:
-		print 'setting parameters'
+		print('setting parameters')
                 session['job_id'] = shortuuid.uuid()
                 outpath = app.config['UPLOAD_FOLDER'] + session['job_id']+ '/'
-		print 'making dir'
+		print('making dir')
                 os.mkdir(outpath)
                 args = default_args.copy()
                 args['inpath'] = app.config['UPLOAD_FOLDER']
                 args['outpath'] = outpath
-                print 'run phylomito'
+                print('run phylomito')
                 phylomito.main(args)
             else:
-                print 'not enough files'
+                print('not enough files')
         return send_file(outpath + 'all_nuc.phy_final_tree.txt')
     return render_template('welcome.html') 
 

@@ -3,7 +3,12 @@
 # phylomito.py
 
 '''Mitochondrial phylogeny using the supermatrix method.'''
+from __future__ import print_function
+from __future__ import division
 
+from builtins import str
+from builtins import range
+from past.utils import old_div
 __author__ = 'Igor Rodrigues da Costa'
 __contact__ = 'igor.bioinfo@gmail.com'
 
@@ -76,12 +81,12 @@ def main(args):
     dloop = args['dloop']
     bootstrap = str(args['bootstrap'])
     if code_table not in [2, 3, 4, 5, 9, 13, 14, 16, 21, 22, 23, 24]: #All mitochondrial codes
-        print 'WARNING: Genetic code n.{} is not Mitochondial!'.format('code_table')
+        print('WARNING: Genetic code n.{} is not Mitochondial!'.format('code_table'))
     try:
         a = open(outpath + log_file, 'w')
         a.close()
     except:
-        print 'Was not able to open {}. Check your permissions.'.format(outpath + log_file)
+        print('Was not able to open {}. Check your permissions.'.format(outpath + log_file))
         raise
     #seqfile will be the file with the concatenated alignment.
     if protein:
@@ -95,7 +100,7 @@ def main(args):
     join_seqs(outpath, protein) #Concatenate all alignments
     fastatophy(seqfile + '.aln', seqfile + '.phy') #Save alignments in phylip format for PhyML.
     #fastatophy(seqfile + '.aln', seqfile + '.nex', 'fasta', 'nexus', protein=protein) #Save alignemnts in nexus format, for MrBayes. (not implemented yet)
-    print 'Running command:', command
+    print('Running command:', command)
     with open(outpath + log_file, 'a') as log:
         a = Popen(shlex.split(command), stdout=log, stderr=log)
         a.wait()
@@ -103,7 +108,7 @@ def main(args):
     if args['gene_tree']:
         aln_genes = [f for f in os.listdir(outpath) if ('.aln' in f and 'all' not in f and '.phy' not in f)]
         for gene_file in aln_genes:
-            print outpath+gene_file
+            print(outpath+gene_file)
             tree_file = gene_tree(outpath + gene_file, protein, bootstrap, outpath + log_file)
             final_tree = tree_file.replace('_phyml_tree.txt', '_final_tree.txt')
             tree_code(tree_file, sp_list, final_tree)
@@ -112,26 +117,26 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
     'if protein, translates to mitochondrial protein'
     genes = deepcopy(KNOWN_GENES)
     if not dloop:
-	genes.remove('DLOOP')
+        genes.remove('DLOOP')
     seq_dic = {gene:[] for gene in genes}
     mitos = []
     for e in extensions:
         mits = [mit for mit in os.listdir(inpath) if mit.endswith(e)]
         mitos += mits
     if len(mitos) < 2:
-        print 'Less than 2 files found. Check your extension and inpath flags!'
+        print('Less than 2 files found. Check your extension and inpath flags!')
         return 0
     mitos.sort()
     size = 0
     sp_list = []
     present_genes = {gene:False for gene in genes}
     for n, f in enumerate(mitos):
-        print 'Reading genebank file:', f #genebank file
+        print('Reading genebank file:', f) #genebank file
         true_sp = ''
         try:
             i = SeqIO.read(inpath + f, 'genbank')
         except ValueError:
-            print 'File', f, 'was not recognized. Check formating and genebank header.'
+            print('File', f, 'was not recognized. Check formating and genebank header.')
             raise
         sp = str(n)
         for seq in i.features:
@@ -157,13 +162,13 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
                     seq_dic[gene_key].append(rec)
                     present_genes[gene_key] = True
                 except:
-                    print header + ' is not a known gene. Replace the CDS gene id with one of the following:'
+                    print(header + ' is not a known gene. Replace the CDS gene id with one of the following:')
                     for g in genes:
-                        print g + ' ',
+                        print(g + ' ', end=' ')
                     raise
                 size += len(s)
             if seq.type == 'misc_feature' and dloop:
-                if 'control region' in seq.qualifiers.values()[0]:
+                if 'control region' in list(seq.qualifiers.values())[0]:
                     s = i[seq.location.start:seq.location.end].seq
                     if seq.strand == -1:
                         s = s.reverse_complement()
@@ -180,18 +185,18 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
                 seq_dic[header].append(rec)
                 size += len(s)
         if not true_sp:
-            print 'File', f, 'has no source feature!' 
+            print('File', f, 'has no source feature!') 
         size = 0
     
         for gene in present_genes:
             if not present_genes[gene]:
-                print 'File ', f, ' is missing gene ', gene
+                print('File ', f, ' is missing gene ', gene)
     for i in seq_dic:
         try:
             assert len(seq_dic[i]) >= len(mitos)
         except AssertionError:
-            print 'Warning: {0}. This gene is not present in all genbank files.({1}/{2})'.format(i, len(seq_dic[i]), len(mitos))
-            print 'Gene removed.'
+            print('Warning: {0}. This gene is not present in all genbank files.({1}/{2})'.format(i, len(seq_dic[i]), len(mitos)))
+            print('Gene removed.')
             continue
         a = open(outpath + i + '.fasta', 'w')
         a.close()
@@ -207,10 +212,10 @@ def run_clustalw(outpath, protein=False):
         if f.endswith('.fasta'):
             fp = outpath + f
             if not protein:
-                command = 'clustalw2 -INFILE=' + fp +\
+                command = 'clustalo -INFILE=' + fp +\
                           ' -ALIGN -OUTPUT=FASTA -OUTFILE=' + outpath + f.split('.')[0] + '_nuc.aln'
             else:
-                command = 'clustalw2 -INFILE=' + fp +\
+                command = 'clustalo -INFILE=' + fp +\
                           ' -ALIGN -TYPE=PROTEIN -OUTPUT=FASTA -OUTFILE=' + outpath + f.split('.')[0] + '_aa.aln'
             if not protein:
                 command2 = 'clustalw -INFILE=' + fp +\
@@ -221,7 +226,7 @@ def run_clustalw(outpath, protein=False):
             with open(outpath+'log_clustalw.txt', 'a') as log:
                 log.write(fp + ' ' + command + '\n')
                 try:
-                    print 'Running command:', command 
+                    print('Running command:', command) 
                     a = Popen(shlex.split(command), stdout=log, stderr=log)
                     a.wait()
                 except:
@@ -238,13 +243,13 @@ def join_seqs(path, protein=False):
         if f.endswith(end) and 'all' not in f:
             for seq in SeqIO.parse(path + f, 'fasta'):
                 sp = seq.description.split('_')[0]
-                if sp in sp_dic.keys():
+                if sp in list(sp_dic.keys()):
                     sp_dic[sp].seq = sp_dic[sp].seq + seq.seq
                 else:
                     sp_dic[sp] = SeqRecord(seq = Seq(str(seq.seq)), id = sp, description = '') #sp_dic = {species1:str(gene1)+str(gene2), species2: str(gene1)+str(gene2), ...}
     a = open(path + 'all' + end, 'w')
     a.close()
-    SeqIO.write(sp_dic.values(), path + 'all' + end, 'fasta')
+    SeqIO.write(list(sp_dic.values()), path + 'all' + end, 'fasta')
 
 def fastatophy(infile, outfile, format_in='fasta', format_out='phylip', protein=True):
     seq_records = []
@@ -257,11 +262,11 @@ def fastatophy(infile, outfile, format_in='fasta', format_out='phylip', protein=
                 else:
                     seq.seq.alphabet = IUPAC.unambiguous_dna
             seq_records.append(seq)
-    with open(outfile, 'wb') as out:
+    with open(outfile, 'w') as out:
         try:
             SeqIO.write(seq_records, out, format_out)
         except:
-            print 'Could not open file:', infile, '| Check your permissions.'
+            print('Could not open file:', infile, '| Check your permissions.')
             raise
 
 def gene_tree(aln_file, protein, bootstrap, log_file):
@@ -273,7 +278,7 @@ def gene_tree(aln_file, protein, bootstrap, log_file):
     phy_file = aln_file[:-4] + '.phy'
     fastatophy(aln_file, phy_file)
     command = command + phy_file
-    print 'Running command:', command
+    print('Running command:', command)
     with open(log_file, 'a') as log:
         a = Popen(shlex.split(command), stdout=log, stderr=log)
         a.wait()
@@ -306,10 +311,10 @@ def bt(aln, nuc, alphabet):
     gaps = 0
     bt_seq = ''
     if len(nucl_seq)%3 != 0:
-        print 'Nucleotide sequence is not divisible by 3, removing excess nucleotides.'
+        print('Nucleotide sequence is not divisible by 3, removing excess nucleotides.')
         nucl_seq = nucl_seq[:-(len(nucl_seq)%3)]
-    if len(nucl_seq)/3 < len(str(prot_seq).replace('-', '')):
-        print len(nucl_seq)/3, str(prot_seq).replace('-', '')
+    if old_div(len(nucl_seq),3) < len(str(prot_seq).replace('-', '')):
+        print(old_div(len(nucl_seq),3), str(prot_seq).replace('-', ''))
         raise ValueError('Nucleotide sequence is smaller than protein sequence times 3!')
     for n, aa in enumerate(list(prot_seq)):
         if aa == '-':
@@ -320,10 +325,10 @@ def bt(aln, nuc, alphabet):
             codon = nucl_seq[pos:pos+3]
             translated = codon.translate(table=alphabet)
             if aa != str(translated):
-                print 'Translation error!'
-                print 'aminoacid/position:', aa, n
-                print 'codon/translated', codon, translated
-                print nuc.id, aln.id
+                print('Translation error!')
+                print('aminoacid/position:', aa, n)
+                print('codon/translated', codon, translated)
+                print(nuc.id, aln.id)
                 return 0
             else:
                 bt_seq += str(codon)
@@ -345,7 +350,7 @@ def tree_code(tree_file, species_list, out_file):
     tree = t.read()[:-1]
     t.close()
     #print tree
-    for k in reversed(range(len(species_list))):
+    for k in reversed(list(range(len(species_list)))):
         tree = tree.replace('(' + str(k), '(' + species_list[k])
         tree = tree.replace(',' + str(k), ',' + species_list[k])
     with open(out_file, 'w') as out:

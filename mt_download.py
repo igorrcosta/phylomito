@@ -1,9 +1,13 @@
+from __future__ import print_function
+from future import standard_library
+standard_library.install_aliases()
 from Bio import Entrez, SeqIO
 import argparse
 from os import getcwd
 from os.path import join
-from urllib import urlencode
-from urllib2 import Request, urlopen, HTTPError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError
 
 def argument_parser():
 
@@ -25,24 +29,24 @@ def download_mt(taxa, outpath):
   data = dict(taxid=taxa, cmd='download1')
   try:
     accesion_ids = urlopen(Request("https://www.ncbi.nlm.nih.gov/genomes/OrganelleResource.cgi", urlencode(data)))
-  except HTTPError, e:
-    print e.read()
+  except HTTPError as e:
+    print(e.read())
   Entrez.email = 'igorrcosta@hotmail.com'
   accesion_list = accesion_ids.read().split()
   n = len(accesion_list)
   if n:
-      print n, 'mitocondrial genomes found.'
+      print(n, 'mitocondrial genomes found.')
   else:
-      print 'No mitocondrial genomes found in this taxon id.' 
+      print('No mitocondrial genomes found in this taxon id.') 
   for i in accesion_list:
-      print 'Downloading genome id:', i
+      print('Downloading genome id:', i)
       handle = Entrez.efetch(db='nuccore', id=i, rettype='gb', retmode='text')
       try:
         with open(join(outpath, i + '.gbk'), 'w') as local_file:
             SeqIO.write(SeqIO.read(handle, "genbank"), local_file, "genbank")
             handle.close()
       except:
-        print 'Cannot open file: Check if you have writing permissions.'
+        print('Cannot open file: Check if you have writing permissions.')
         raise
 if __name__ == '__main__':
     args = argument_parser()
