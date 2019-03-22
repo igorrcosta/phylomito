@@ -4,14 +4,21 @@
 
 '''Mitochondrial phylogeny using the supermatrix method.'''
 
+from __future__ import print_function
+from __future__ import division
+
 __author__ = 'Igor Rodrigues da Costa'
 __contact__ = 'igor.bioinfo@gmail.com'
+
 
 import os
 import shlex
 import argparse
+from builtins import str
+from builtins import range
 from subprocess import Popen
 from copy import deepcopy
+from past.utils import old_div
 from Bio import SeqIO, AlignIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
@@ -76,14 +83,14 @@ def main(args):
     dloop = args['dloop']
     bootstrap = str(args['bootstrap'])
     if code_table not in [2, 3, 4, 5, 9, 13, 14, 16, 21, 22, 23, 24]: #All mitochondrial codes
-        print 'WARNING: Genetic code n.{} is not Mitochondial!'.format('code_table')
+        print('WARNING: Genetic code n.{} is not Mitochondial!'.format('code_table'))
     if not dloop:
         KNOWN_GENES.remove('DLOOP')
     try:
         a = open(outpath + log_file, 'w')
         a.close()
     except:
-        print 'Was not able to open {}. Check your permissions.'.format(outpath + log_file)
+        print('Was not able to open {}. Check your permissions.'.format(outpath + log_file))
         raise
     #seqfile will be the file with the concatenated alignment.
     if protein:
@@ -97,7 +104,7 @@ def main(args):
     join_seqs(outpath, protein) #Concatenate all alignments
     fastatophy(seqfile + '.aln', seqfile + '.phy') #Save alignments in phylip format for PhyML.
     #fastatophy(seqfile + '.aln', seqfile + '.nex', 'fasta', 'nexus', protein=protein) #Save alignemnts in nexus format, for MrBayes. (not implemented yet)
-    print 'Running command:', command
+    print('Running command:', command)
     with open(outpath + log_file, 'a') as log:
         a = Popen(shlex.split(command), stdout=log, stderr=log)
         a.wait()
@@ -105,40 +112,44 @@ def main(args):
     if args['gene_tree']:
         aln_genes = [f for f in os.listdir(outpath) if ('.aln' in f and 'all' not in f and '.phy' not in f)]
         for gene_file in aln_genes:
-            print outpath+gene_file
+            print(outpath+gene_file)
             tree_file = gene_tree(outpath + gene_file, protein, bootstrap, outpath + log_file)
             final_tree = tree_file.replace('_phyml_tree.txt', '_final_tree.txt')
             tree_code(tree_file, sp_list, final_tree)
                 
-def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
-    'if protein, translates to mitochondrial protein'
-    seq_dic = {gene:[] for gene in KNOWN_GENES}
+def find_files(inpath, extensions):
     mitos = []
     for e in extensions:
         mits = [mit for mit in os.listdir(inpath) if mit.endswith(e)]
         mitos += mits
-    if len(mitos) < 2:
-        print 'Less than 2 files found. Check your extension and inpath flags!'
-        return 0
     mitos.sort()
-    size = 0
-    sp_list = []
+    return mitos
+
+def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
+    'if protein, translates to mitochondrial protein'
+    seq_dic = {gene:[] for gene in KNOWN_GENES}
     present_genes = {gene:False for gene in KNOWN_GENES}
-    for n, f in enumerate(mitos):
-        print 'Reading genebank file:', f #genebank file
+    size = 0 #size of the multiple alignment
+    sp_list = []
+    all_mitos = find_files(inpath, extensions)
+    if len(all_mitos) < 2:
+        print('Less than 2 files found. Check your extension and inpath flags!')
+        return 0
+    for n, f in enumerate(all_mitos):
+        print('Reading genebank file:', f) #genebank file
         true_sp = ''
         try:
-            i = SeqIO.read(inpath + f, 'genbank')
+            genebank_data = SeqIO.read(inpath + f, 'genbank')
         except ValueError:
-            print 'File', f, 'was not recognized. Check formating and genebank header.'
+            print('File', f, 'was not recognized. Check formating and genebank header.')
             raise
-        sp = str(n)
-        for seq in i.features:
+        sp = str(n) #species code
+        for seq in genebank_data.features:
             if seq.type == 'source':
                 true_sp = '_'.join(seq.qualifiers['organism'][0].split())
                 sp_list.append(true_sp)
             if seq.type == 'CDS':
-                s = i[seq.location.start:seq.location.end].seq
+                s = genebank_data[seq.location.start:seq.location.end].seq
                 if seq.strand == -1:
                     s = s.reverse_complement()
                 if protein:
@@ -156,15 +167,15 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
                     seq_dic[gene_key].append(rec)
                     present_genes[gene_key] = True
                 except:
-                    print header + ' is not a known gene. Replace the CDS gene id with one of the following:'
-                    for g in KNOWN_GENES:
-                        print g + ' ',
+                    print(header + ' is not a known gene. Replace the CDS gene id with one of the following:')
+                    for gene_name in KNOWN_GENES:
+                        print(gene_name + ' ', end=' ')
                     raise
-                size += len(s)
+                size += len(s) #size of the multiple alignment
             if seq.type == 'misc_feature' and dloop:
-                if 'control region' in seq.qualifiers.values()[0]:
-                    print 'oi'
-                    s = i[seq.location.start:seq.location.end].seq
+                if 'control region' in list(seq.qualifiers.values())[0]:
+                    print('oi')
+                    s = genebank_data[seq.location.start:seq.location.end].seq
                     if seq.strand == -1:
                         s = s.reverse_complement()
                     header = 'DLOOP'
@@ -172,7 +183,7 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
                     seq_dic[header].append(rec)
                     size += len(s)
             if (seq.type.lower() == 'd-loop' or seq.type.lower() == 'dloop') and not protein and dloop:
-                s = i[seq.location.start:seq.location.end].seq
+                s = genebank_data[seq.location.start:seq.location.end].seq
                 if seq.strand == -1:
                     s = s.reverse_complement()
                 header = 'DLOOP'
@@ -180,22 +191,22 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
                 seq_dic[header].append(rec)
                 size += len(s)
         if not true_sp:
-            print 'File', f, 'has no source feature!' 
+            print('File', f, 'has no source feature!') 
         size = 0
     
         for gene in present_genes:
             if not present_genes[gene]:
-                print 'File ', f, ' is missing gene ', gene
-    for i in seq_dic:
+                print('File ', f, ' is missing gene ', gene)
+    for gene in seq_dic:
         try:
-            assert len(seq_dic[i]) >= len(mitos)
+            assert len(seq_dic[gene]) >= len(mitos)
         except AssertionError:
-            print 'Warning: {0}. This gene is not present in all genbank files.({1}/{2})'.format(i, len(seq_dic[i]), len(mitos))
-            print 'Gene removed.'
+            print('Warning: {0}. This gene is not present in all genbank files.({1}/{2})'.format(gene, len(seq_dic[gene]), len(mitos)))
+            print('Gene removed.')
             continue
-        a = open(outpath + i + '.fasta', 'w')
+        a = open(outpath + gene + '.fasta', 'w')
         a.close()
-        SeqIO.write(seq_dic[i], outpath + i + '.fasta', 'fasta')
+        SeqIO.write(seq_dic[gene], outpath + gene + '.fasta', 'fasta')
     with open('species_code.txt', 'w') as sp_file:
         for n, sp in enumerate(sp_list):
             sp_file.write(str(n) + ' ' + sp + '\n')
@@ -221,7 +232,7 @@ def run_clustalw(outpath, protein=False):
             with open(outpath+'log_clustalw.txt', 'a') as log:
                 log.write(fp + ' ' + command + '\n')
                 try:
-                    print 'Running command:', command 
+                    print('Running command:', command) 
                     a = Popen(shlex.split(command), stdout=log, stderr=log)
                     a.wait()
                 except:
@@ -238,19 +249,19 @@ def join_seqs(path, protein=False):
         if f.endswith(end) and 'all' not in f:
             for seq in SeqIO.parse(path + f, 'fasta'):
                 sp = seq.description.split('_')[0]
-                if sp in sp_dic.keys():
+                if sp in list(sp_dic.keys()):
                     sp_dic[sp].seq = sp_dic[sp].seq + seq.seq
                 else:
                     sp_dic[sp] = SeqRecord(seq = Seq(str(seq.seq)), id = sp, description = '') #sp_dic = {species1:str(gene1)+str(gene2), species2: str(gene1)+str(gene2), ...}
-    a = open(path + 'all' + end, 'w')
-    a.close()
-    SeqIO.write(sp_dic.values(), path + 'all' + end, 'fasta')
+    clear_file = open(path + 'all' + end, 'w')
+    clear_file.close()
+    SeqIO.write(list(sp_dic.values()), path + 'all' + end, 'fasta')
 
 def fastatophy(infile, outfile, format_in='fasta', format_out='phylip', protein=True):
     seq_records = []
     with open(infile, 'r') as handle:
-        i = SeqIO.parse(handle, format_in)
-        for seq in i:
+        in_parsed = SeqIO.parse(handle, format_in)
+        for seq in in_parsed:
             if format_out == 'nexus':
                 if protein:
                     seq.seq.alphabet = IUPAC.protein
@@ -261,7 +272,7 @@ def fastatophy(infile, outfile, format_in='fasta', format_out='phylip', protein=
         try:
             SeqIO.write(seq_records, out, format_out)
         except:
-            print 'Could not open file:', infile, '| Check your permissions.'
+            print('Could not open file:', infile, '| Check your permissions.')
             raise
 
 def gene_tree(aln_file, protein, bootstrap, log_file):
@@ -273,20 +284,20 @@ def gene_tree(aln_file, protein, bootstrap, log_file):
     phy_file = aln_file[:-4] + '.phy'
     fastatophy(aln_file, phy_file)
     command = command + phy_file
-    print 'Running command:', command
+    print('Running command:', command)
     with open(log_file, 'a') as log:
-        a = Popen(shlex.split(command), stdout=log, stderr=log)
-        a.wait()
+        run = Popen(shlex.split(command), stdout=log, stderr=log)
+        run.wait()
     tree_file = phy_file + '_phyml_tree.txt'
     return tree_file
 
 def remove_gap(aligned_fasta, outfile):
-    with open(outfile, 'w') as o:
+    with open(outfile, 'w') as out:
         for line in open(aligned_fasta, 'r'):
             if '>' not in line:
-                o.write(line.replace('-', ''))
+                out.write(line.replace('-', ''))
             else:
-                o.write(line)
+                out.write(line)
 
 def file_handler(aln_file, nuc_file, outfile, alphabet='Vertebrate Mitochondrial'):
     out_rec = []
@@ -306,10 +317,10 @@ def bt(aln, nuc, alphabet):
     gaps = 0
     bt_seq = ''
     if len(nucl_seq)%3 != 0:
-        print 'Nucleotide sequence is not divisible by 3, removing excess nucleotides.'
+        print('Nucleotide sequence is not divisible by 3, removing excess nucleotides.')
         nucl_seq = nucl_seq[:-(len(nucl_seq)%3)]
-    if len(nucl_seq)/3 < len(str(prot_seq).replace('-', '')):
-        print len(nucl_seq)/3, str(prot_seq).replace('-', '')
+    if old_div(len(nucl_seq),3) < len(str(prot_seq).replace('-', '')):
+        print(old_div(len(nucl_seq),3), str(prot_seq).replace('-', ''))
         raise ValueError('Nucleotide sequence is smaller than protein sequence times 3!')
     for n, aa in enumerate(list(prot_seq)):
         if aa == '-':
@@ -320,10 +331,10 @@ def bt(aln, nuc, alphabet):
             codon = nucl_seq[pos:pos+3]
             translated = codon.translate(table=alphabet)
             if aa != str(translated):
-                print 'Translation error!'
-                print 'aminoacid/position:', aa, n
-                print 'codon/translated', codon, translated
-                print nuc.id, aln.id
+                print('Translation error!')
+                print('aminoacid/position:', aa, n)
+                print('codon/translated', codon, translated)
+                print(nuc.id, aln.id)
                 return 0
             else:
                 bt_seq += str(codon)
@@ -331,23 +342,23 @@ def bt(aln, nuc, alphabet):
 
 def run_bt_mito(path):
     genes = deepcopy(KNOWN_GENES)
-    gene.remove('ND3')
+    genes.remove('ND3')
     try:
-        gene.remove('DLOOP')
+        genes.remove('DLOOP')
     except ValueError:
         pass
     pairs = [(gene + '_aa.aln', gene + '.fasta', gene + '_codon.aln') for gene in genes]
-    for p in pairs:
-        file_handler(p[0], p[1], p[2])
+    for pair in pairs:
+        file_handler(pair[0], pair[1], pair[2])
 
 def tree_code(tree_file, species_list, out_file):
-    t = open(tree_file, 'r') 
-    tree = t.read()[:-1]
-    t.close()
+    tree_temp = open(tree_file, 'r') 
+    tree = tree_temp.read()[:-1]
+    tree_temp.close()
     #print tree
-    for k in reversed(range(len(species_list))):
-        tree = tree.replace('(' + str(k), '(' + species_list[k])
-        tree = tree.replace(',' + str(k), ',' + species_list[k])
+    for key in reversed(list(range(len(species_list)))):
+        tree = tree.replace('(' + str(key), '(' + species_list[key])
+        tree = tree.replace(',' + str(key), ',' + species_list[key])
     with open(out_file, 'w') as out:
         out.write(tree)    
 
