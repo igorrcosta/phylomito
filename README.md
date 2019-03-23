@@ -24,7 +24,7 @@ python phylomito.py -i ./genebank/ -o ./outpath/
 
 ## Requisites:
 
-You need to install [PhyML](http://www.atgc-montpellier.fr/phyml/binaries.php), [CLUSTALW](http://www.clustal.org/download/current/), [python 2.7](https://www.python.org/downloads/release/python-2710/) and the [Biopython library](http://biopython.org/wiki/Download) to run this program.
+You need to install [PhyML](http://www.atgc-montpellier.fr/phyml/binaries.php), [Clustal Omega](http://www.clustal.org/omega/), [python 3](https://www.python.org/downloads/) and the [Biopython library](http://biopython.org/wiki/Download) to run this program.
 
 This program was tested on a Linux machine.
 
