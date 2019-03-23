@@ -19,7 +19,7 @@ from builtins import range
 from subprocess import Popen
 from copy import deepcopy
 from past.utils import old_div
-from Bio import SeqIO, AlignIO
+from Bio import SeqIO#, AlignIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.Alphabet import IUPAC, generic_dna
@@ -30,37 +30,50 @@ GENES = [('ND1', 'NAD1'), ('ND2', 'NAD2'), ('COX1', 'CO1'), ('COX2', 'CO2'),
          ('ND4L', 'NAD4L'), ('ND4', 'NAD4'), ('ND5', 'NAD5'),
          ('CYTB', 'Cyt B', 'COB'), ('ND6', 'NAD6'), ('COX3', 'CO3'), ('DLOOP',)]
 KNOWN_GENES = ['ND1', 'ND2', 'COX1', 'COX2', 'ATP8', 'ATP6', 'ND3', 'ND4L',
-              'ND4', 'ND5', 'CYTB', 'ND6', 'COX3', 'DLOOP']
+               'ND4', 'ND5', 'CYTB', 'ND6', 'COX3', 'DLOOP']
 GENE_DICT = {}
 for n, gs in enumerate(GENES):
     for g in gs:
         GENE_DICT[g] = KNOWN_GENES[n]
 
-def argument_parser(hlp = False):
+def argument_parser(hlp=False):
     '''phylomito.py -i /path/to/genbank/ -p -o /path/to/output/
     Output default: current working directory.'''
 
     default_out = os.getcwd() + '/'
-    parser = argparse.ArgumentParser(description='Phylomito is a simple pipeline to automatize mitochondrial super-matrix phylogenomic, using clustaw, phyML and mrbayes.',\
-                                     argument_default = None, fromfile_prefix_chars = '@')
+    parser = argparse.ArgumentParser(description='Phylomito is a simple pipeline\
+                                     to automatize mitochondrial super-matrix\
+                                     phylogenomic, using clustaw, phyML and mrbayes.',\
+                                     argument_default=None, fromfile_prefix_chars='@')
     parser.add_argument('-i', '--inpath', nargs='?', type=str, required=True,\
-                        dest='inpath', help='Path to the folder with genbank sequences. (default: %(default)s)')
+                        dest='inpath', help='Path to the folder with genbank\
+                        sequences. (default: %(default)s)')
     parser.add_argument('-o', '--outpath', nargs='?', type=str, default=default_out,\
-                        dest='outpath', help='Path were the alignments and phylogenetic tree will be saved. (default: %(default)s)')
+                        dest='outpath', help='Path were the alignments and phylogenetic\
+                        tree will be saved. (default: %(default)s)')
     parser.add_argument('-l', '--log', nargs='?', type=str, default='phyml.log',\
                         dest='log', help='Log file. (default: %(default)s)')
     parser.add_argument('-e', '--extension', nargs='*', type=str, default=['.gbk', '.gb'],\
-                        dest='extension', help='Extension for the genbank files. (default: %(default)s)')
-    parser.add_argument('-b', '--bootstrap', nargs='?', type=int, default=100 ,\
-                        dest='bootstrap', help='Number of bootstrap repetitions on PhyML. (default: %(default)s)')
+                        dest='extension', help='Extension for the genbank files.\
+                        (default: %(default)s)')
+    parser.add_argument('-b', '--bootstrap', nargs='?', type=int, default=100,\
+                        dest='bootstrap', help='Number of bootstrap repetitions\
+                        on PhyML. (default: %(default)s)')
     parser.add_argument('-p', '--protein', nargs='?', const=True, default=False,\
-                        dest='protein', help='Set this flag for protein sequences alignment and phylogeny. (default: %(default)s)')
+                        dest='protein', help='Set this flag for protein sequences\
+                        alignment and phylogeny. (default: %(default)s)')
     parser.add_argument('-g', '--gene_tree', nargs='?', const=True, default=False,\
-                        dest='gene_tree', help='Set this flag if you want to make a tree for every gene. (default: %(default)s)')
+                        dest='gene_tree', help='Set this flag if you want to make a\
+                        tree for every gene. (default: %(default)s)')
     parser.add_argument('-d', '--dloop', nargs='?', const=True, default=False,\
-                        dest='dloop', help='Flag to include DLOOP region in the alignment. (default: %(default)s)')
+                        dest='dloop', help='Flag to include DLOOP region in the\
+                        alignment. (default: %(default)s)')
     parser.add_argument('-t', '--code_table', nargs='?', type=int, default=2,\
-                        dest='code_table', help='Genetic table to be used for translation. Only matters if --protein flag is used. Default is Vertebrate Mitochondrial Code. See all tables at http://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi. (default: %(default)s)')
+                        dest='code_table', help='Genetic table to be used for\
+                        translation. Only matters if --protein flag is used.\
+                        Default is Vertebrate Mitochondrial Code. See all tables\
+                        at http://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi.\
+                        (default: %(default)s)')
     if hlp:
         args = parser.parse_args(['-h'])
     else:
@@ -82,7 +95,8 @@ def main(args):
     extension = args['extension']
     dloop = args['dloop']
     bootstrap = str(args['bootstrap'])
-    if code_table not in [2, 3, 4, 5, 9, 13, 14, 16, 21, 22, 23, 24]: #All mitochondrial codes
+    #All mitochondrial codes
+    if code_table not in [2, 3, 4, 5, 9, 13, 14, 16, 21, 22, 23, 24]:
         print('WARNING: Genetic code n.{} is not Mitochondial!'.format('code_table'))
     if not dloop:
         KNOWN_GENES.remove('DLOOP')
@@ -95,32 +109,37 @@ def main(args):
     #seqfile will be the file with the concatenated alignment.
     if protein:
         seqfile = outpath + 'all_aa'
-        command = 'phyml -d aa -m JTT -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i ' + outpath + 'all_aa.phy'
+        command = 'phyml -d aa -m JTT -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i '\
+                  + outpath + 'all_aa.phy'
     else:
         seqfile = outpath + 'all_nuc'
-        command = 'phyml -m GTR -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i ' + outpath + 'all_nuc.phy'
-    sp_list = split_seqs(inpath, outpath, protein, extension, code_table, dloop) #Save each gene in a fasta file
+        command = 'phyml -m GTR -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i '\
+                  + outpath + 'all_nuc.phy'
+    #Save each gene in a fasta file
+    sp_list = split_seqs(inpath, outpath, protein, extension, code_table, dloop) 
     run_clustalw(outpath, protein) #Align all fasta files
     join_seqs(outpath, protein) #Concatenate all alignments
-    fastatophy(seqfile + '.aln', seqfile + '.phy') #Save alignments in phylip format for PhyML.
-    #fastatophy(seqfile + '.aln', seqfile + '.nex', 'fasta', 'nexus', protein=protein) #Save alignemnts in nexus format, for MrBayes. (not implemented yet)
-    print('Running command:', command)
-    with open(outpath + log_file, 'a') as log:
-        a = Popen(shlex.split(command), stdout=log, stderr=log)
-        a.wait()
-    tree_code(seqfile + '.phy_phyml_tree.txt', sp_list, seqfile + '.phy_final_tree.txt')
-    if args['gene_tree']:
-        aln_genes = [f for f in os.listdir(outpath) if ('.aln' in f and 'all' not in f and '.phy' not in f)]
-        for gene_file in aln_genes:
-            print(outpath+gene_file)
-            tree_file = gene_tree(outpath + gene_file, protein, bootstrap, outpath + log_file)
-            final_tree = tree_file.replace('_phyml_tree.txt', '_final_tree.txt')
-            tree_code(tree_file, sp_list, final_tree)
+    if not skip_phyml:
+        fastatophy(seqfile + '.aln', seqfile + '.phy') #Save alignments in phylip format for PhyML.
+        #Save alignemnts in nexus format, for MrBayes. (not implemented yet)
+        #fastatophy(seqfile + '.aln', seqfile + '.nex', 'fasta', 'nexus', protein=protein) 
+        print('Running command:', command)
+        with open(outpath + log_file, 'a') as log:
+            a = Popen(shlex.split(command), stdout=log, stderr=log)
+            a.wait()
+        tree_code(seqfile + '.phy_phyml_tree.txt', sp_list, seqfile + '.phy_final_tree.txt')
+        if args['gene_tree']:
+            aln_genes = [f for f in os.listdir(outpath) if ('.aln' in f and 'all' not in f and '.phy' not in f)]
+            for gene_file in aln_genes:
+                print(outpath+gene_file)
+                tree_file = gene_tree(outpath + gene_file, protein, bootstrap, outpath + log_file)
+                final_tree = tree_file.replace('_phyml_tree.txt', '_final_tree.txt')
+                tree_code(tree_file, sp_list, final_tree)
                 
 def find_files(inpath, extensions):
     mitos = []
-    for e in extensions:
-        mits = [mit for mit in os.listdir(inpath) if mit.endswith(e)]
+    for ext in extensions:
+        mits = [mit for mit in os.listdir(inpath) if mit.endswith(ext)]
         mitos += mits
     mitos.sort()
     return mitos
@@ -167,7 +186,8 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
                     seq_dic[gene_key].append(rec)
                     present_genes[gene_key] = True
                 except:
-                    print(header + ' is not a known gene. Replace the CDS gene id with one of the following:')
+                    print(header + ' is not a known gene. Replace the CDS gene id\
+                                    with one of the following:')
                     for gene_name in KNOWN_GENES:
                         print(gene_name + ' ', end=' ')
                     raise
@@ -187,7 +207,7 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
                 if seq.strand == -1:
                     s = s.reverse_complement()
                 header = 'DLOOP'
-                rec = SeqRecord(s, description = '', id = sp + '_' + header)
+                rec = SeqRecord(s, description='', id=sp + '_' + header)
                 seq_dic[header].append(rec)
                 size += len(s)
         if not true_sp:
@@ -199,9 +219,10 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
                 print('File ', f, ' is missing gene ', gene)
     for gene in seq_dic:
         try:
-            assert len(seq_dic[gene]) >= len(mitos)
+            assert len(seq_dic[gene]) >= len(all_mitos)
         except AssertionError:
-            print('Warning: {0}. This gene is not present in all genbank files.({1}/{2})'.format(gene, len(seq_dic[gene]), len(mitos)))
+            print('Warning: {0}. This gene is not present in all genbank files.({1}/{2})'\
+                  .format(gene, len(seq_dic[gene]), len(mitos)))
             print('Gene removed.')
             continue
         a = open(outpath + gene + '.fasta', 'w')
@@ -216,21 +237,25 @@ def run_clustalw(outpath, protein=False):
 
     for f in os.listdir(outpath):
         if f.endswith('.fasta'):
-            fp = outpath + f
+            file_path = outpath + f
             if not protein:
-                command = 'clustalw2 -INFILE=' + fp +\
-                          ' -ALIGN -OUTPUT=FASTA -OUTFILE=' + outpath + f.split('.')[0] + '_nuc.aln'
+                command = 'clustalo -INFILE=' + file_path +\
+                          ' -ALIGN -OUTPUT=FASTA -OUTFILE='\
+                          + outpath + f.split('.')[0] + '_nuc.aln'
             else:
-                command = 'clustalw2 -INFILE=' + fp +\
-                          ' -ALIGN -TYPE=PROTEIN -OUTPUT=FASTA -OUTFILE=' + outpath + f.split('.')[0] + '_aa.aln'
+                command = 'clustalo -INFILE=' + file_path +\
+                          ' -ALIGN -TYPE=PROTEIN -OUTPUT=FASTA -OUTFILE='\
+                          + outpath + f.split('.')[0] + '_aa.aln'
             if not protein:
-                command2 = 'clustalw -INFILE=' + fp +\
-                          ' -ALIGN -OUTPUT=FASTA -OUTFILE=' + outpath + f.split('.')[0] + '_nuc.aln'
+                command2 = 'clustalw -INFILE=' + file_path +\
+                          ' -ALIGN -OUTPUT=FASTA -OUTFILE='\
+                          + outpath + f.split('.')[0] + '_nuc.aln'
             else:
-                command2 = 'clustalw -INFILE=' + fp +\
-                          ' -ALIGN -TYPE=PROTEIN -OUTPUT=FASTA -OUTFILE=' + outpath + f.split('.')[0] + '_aa.aln'
+                command2 = 'clustalw -INFILE=' + file_path +\
+                          ' -ALIGN -TYPE=PROTEIN -OUTPUT=FASTA -OUTFILE='\
+                          + outpath + f.split('.')[0] + '_aa.aln'
             with open(outpath+'log_clustalw.txt', 'a') as log:
-                log.write(fp + ' ' + command + '\n')
+                log.write(file_path + ' ' + command + '\n')
                 try:
                     print('Running command:', command) 
                     a = Popen(shlex.split(command), stdout=log, stderr=log)
@@ -252,7 +277,8 @@ def join_seqs(path, protein=False):
                 if sp in list(sp_dic.keys()):
                     sp_dic[sp].seq = sp_dic[sp].seq + seq.seq
                 else:
-                    sp_dic[sp] = SeqRecord(seq = Seq(str(seq.seq)), id = sp, description = '') #sp_dic = {species1:str(gene1)+str(gene2), species2: str(gene1)+str(gene2), ...}
+                    #sp_dic = {species1:str(gene1)+str(gene2), species2: str(gene1)+str(gene2),}
+                    sp_dic[sp] = SeqRecord(seq=Seq(str(seq.seq)), id=sp, description='') 
     clear_file = open(path + 'all' + end, 'w')
     clear_file.close()
     SeqIO.write(list(sp_dic.values()), path + 'all' + end, 'fasta')
@@ -268,7 +294,7 @@ def fastatophy(infile, outfile, format_in='fasta', format_out='phylip', protein=
                 else:
                     seq.seq.alphabet = IUPAC.unambiguous_dna
             seq_records.append(seq)
-    with open(outfile, 'wb') as out:
+    with open(outfile, 'w') as out:
         try:
             SeqIO.write(seq_records, out, format_out)
         except:
@@ -304,13 +330,14 @@ def file_handler(aln_file, nuc_file, outfile, alphabet='Vertebrate Mitochondrial
     for aln in SeqIO.parse(aln_file, 'fasta'):
         for nuc in SeqIO.parse(nuc_file, 'fasta'):
             if nuc.id == aln.id:
-                out = bt(aln, nuc, alphabet)
+                out = back_translate(aln, nuc, alphabet)
                 out_seq = Seq(out, generic_dna)
-                out_rec.append(SeqRecord(out_seq, id=nuc.id.split('_')[0], description=nuc.description.split('_')[0]))
+                out_rec.append(SeqRecord(out_seq, id=nuc.id.split('_')[0],\
+                               description=nuc.description.split('_')[0]))
     SeqIO.write(out_rec, outfile, 'fasta')
 
 
-def bt(aln, nuc, alphabet):
+def back_translate(aln, nuc, alphabet):
     'Back translate a nucleotidic sequence based on an amino acid (gapped) sequence'
     prot_seq = aln.seq
     nucl_seq = nuc.seq
@@ -319,8 +346,8 @@ def bt(aln, nuc, alphabet):
     if len(nucl_seq)%3 != 0:
         print('Nucleotide sequence is not divisible by 3, removing excess nucleotides.')
         nucl_seq = nucl_seq[:-(len(nucl_seq)%3)]
-    if old_div(len(nucl_seq),3) < len(str(prot_seq).replace('-', '')):
-        print(old_div(len(nucl_seq),3), str(prot_seq).replace('-', ''))
+    if old_div(len(nucl_seq), 3) < len(str(prot_seq).replace('-', '')):
+        print(old_div(len(nucl_seq), 3), str(prot_seq).replace('-', ''))
         raise ValueError('Nucleotide sequence is smaller than protein sequence times 3!')
     for n, aa in enumerate(list(prot_seq)):
         if aa == '-':
@@ -336,11 +363,10 @@ def bt(aln, nuc, alphabet):
                 print('codon/translated', codon, translated)
                 print(nuc.id, aln.id)
                 return 0
-            else:
-                bt_seq += str(codon)
+            bt_seq += str(codon)
     return bt_seq
 
-def run_bt_mito(path):
+def run_bt_mito():
     genes = deepcopy(KNOWN_GENES)
     genes.remove('ND3')
     try:
@@ -363,5 +389,5 @@ def tree_code(tree_file, species_list, out_file):
         out.write(tree)    
 
 if __name__ == '__main__':
-    args = argument_parser()
-    main(args)
+    args_dict = argument_parser()
+    main(args_dict)
