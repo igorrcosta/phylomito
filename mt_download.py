@@ -1,13 +1,15 @@
 from __future__ import print_function
 from future import standard_library
+
 standard_library.install_aliases()
-from Bio import Entrez, SeqIO
+
 import argparse
 from os import getcwd
 from os.path import join
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
+from Bio import Entrez, SeqIO
 
 def argument_parser():
 
@@ -39,6 +41,7 @@ def download_mt(taxa, outpath):
   else:
       print('No mitocondrial genomes found in this taxon id.') 
   for i in accesion_list:
+      # Use this? https://www.ncbi.nlm.nih.gov/genome/browse#!/organelles/
       print('Downloading genome id:', i)
       handle = Entrez.efetch(db='nuccore', id=i, rettype='gb', retmode='text')
       try:
