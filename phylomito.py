@@ -137,6 +137,27 @@ def main(args):
                 tree_code(tree_file, sp_list, final_tree)
                 
 def find_files(inpath, extensions):
+    fastatophy(seqfile + '.aln', seqfile + '.phy') #Save alignments in phylip format for PhyML.
+    #fastatophy(seqfile + '.aln', seqfile + '.nex', 'fasta', 'nexus', protein=protein) #Save alignemnts in nexus format, for MrBayes. (not implemented yet)
+    print('Running command:', command)
+    with open(outpath + log_file, 'a') as log:
+        a = Popen(shlex.split(command), stdout=log, stderr=log)
+        a.wait()
+    tree_code(seqfile + '.phy_phyml_tree.txt', sp_list, seqfile + '.phy_final_tree.txt')
+    if args['gene_tree']:
+        aln_genes = [f for f in os.listdir(outpath) if ('.aln' in f and 'all' not in f and '.phy' not in f)]
+        for gene_file in aln_genes:
+            print(outpath+gene_file)
+            tree_file = gene_tree(outpath + gene_file, protein, bootstrap, outpath + log_file)
+            final_tree = tree_file.replace('_phyml_tree.txt', '_final_tree.txt')
+            tree_code(tree_file, sp_list, final_tree)
+                
+def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
+    'if protein, translates to mitochondrial protein'
+    genes = deepcopy(KNOWN_GENES)
+    if not dloop and 'DLOOP' in genes:
+        genes.remove('DLOOP')
+    seq_dic = {gene:[] for gene in genes}
     mitos = []
     for ext in extensions:
         mits = [mit for mit in os.listdir(inpath) if mit.endswith(ext)]
@@ -146,15 +167,22 @@ def find_files(inpath, extensions):
 
 def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
     'if protein, translates to mitochondrial protein'
-    seq_dic = {gene:[] for gene in KNOWN_GENES}
-    present_genes = {gene:False for gene in KNOWN_GENES}
-    size = 0 #size of the multiple alignment
-    sp_list = []
-    all_mitos = find_files(inpath, extensions)
-    if len(all_mitos) < 2:
+    genes = deepcopy(KNOWN_GENES)
+    if not dloop and 'DLOOP' in genes:
+        genes.remove('DLOOP')
+    seq_dic = {gene:[] for gene in genes}
+    mitos = []
+    for e in extensions:
+        mits = [mit for mit in os.listdir(inpath) if mit.endswith(e)]
+        mitos += mits
+    if len(mitos) < 2:
         print('Less than 2 files found. Check your extension and inpath flags!')
         return 0
-    for n, f in enumerate(all_mitos):
+    mitos.sort()
+    size = 0
+    sp_list = []
+    present_genes = {gene:False for gene in genes}
+    for n, f in enumerate(mitos):
         print('Reading genebank file:', f) #genebank file
         true_sp = ''
         try:
@@ -194,7 +222,6 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
                 size += len(s) #size of the multiple alignment
             if seq.type == 'misc_feature' and dloop:
                 if 'control region' in list(seq.qualifiers.values())[0]:
-                    print('oi')
                     s = genebank_data[seq.location.start:seq.location.end].seq
                     if seq.strand == -1:
                         s = s.reverse_complement()
@@ -219,7 +246,7 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
                 print('File ', f, ' is missing gene ', gene)
     for gene in seq_dic:
         try:
-            assert len(seq_dic[gene]) >= len(all_mitos)
+            assert len(seq_dic[gene]) >= len(mitos)
         except AssertionError:
             print('Warning: {0}. This gene is not present in all genbank files.({1}/{2})'\
                   .format(gene, len(seq_dic[gene]), len(mitos)))
