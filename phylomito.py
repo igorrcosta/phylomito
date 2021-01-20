@@ -98,8 +98,8 @@ def main(args):
     #All mitochondrial codes
     if code_table not in [2, 3, 4, 5, 9, 13, 14, 16, 21, 22, 23, 24]:
         print('WARNING: Genetic code n.{} is not Mitochondial!'.format('code_table'))
-    if not dloop:
-        KNOWN_GENES.remove('DLOOP')
+    #if not dloop:
+    #    KNOWN_GENES.remove('DLOOP')
     try:
         a = open(outpath + log_file, 'w')
         a.close()
@@ -120,16 +120,16 @@ def main(args):
     run_clustalw(outpath, protein) #Align all fasta files
     join_seqs(outpath, protein) #Concatenate all alignments
     if not skip_phyml:
-        fastatophy(seqfile + '.aln', seqfile + '.phy') #Save alignments in phylip format for PhyML.
+        fastatophy(seqfile + '.aln.fasta', seqfile + '.phy') #Save alignments in phylip format for PhyML.
         #Save alignemnts in nexus format, for MrBayes. (not implemented yet)
-        #fastatophy(seqfile + '.aln', seqfile + '.nex', 'fasta', 'nexus', protein=protein) 
+        #fastatophy(seqfile + '.aln.fasta', seqfile + '.nex', 'fasta', 'nexus', protein=protein) 
         print('Running command:', command)
         with open(outpath + log_file, 'a') as log:
             a = Popen(shlex.split(command), stdout=log, stderr=log)
             a.wait()
         tree_code(seqfile + '.phy_phyml_tree.txt', sp_list, seqfile + '.phy_final_tree.txt')
         if args['gene_tree']:
-            aln_genes = [f for f in os.listdir(outpath) if ('.aln' in f and 'all' not in f and '.phy' not in f)]
+            aln_genes = [f for f in os.listdir(outpath) if ('.aln.fasta' in f and 'all' not in f and '.phy' not in f)]
             for gene_file in aln_genes:
                 print(outpath+gene_file)
                 tree_file = gene_tree(outpath + gene_file, protein, bootstrap, outpath + log_file)
@@ -137,15 +137,15 @@ def main(args):
                 tree_code(tree_file, sp_list, final_tree)
                 
 def find_files(inpath, extensions):
-    fastatophy(seqfile + '.aln', seqfile + '.phy') #Save alignments in phylip format for PhyML.
-    #fastatophy(seqfile + '.aln', seqfile + '.nex', 'fasta', 'nexus', protein=protein) #Save alignemnts in nexus format, for MrBayes. (not implemented yet)
+    fastatophy(seqfile + '.aln.fasta', seqfile + '.phy') #Save alignments in phylip format for PhyML.
+    #fastatophy(seqfile + '.aln.fasta', seqfile + '.nex', 'fasta', 'nexus', protein=protein) #Save alignemnts in nexus format, for MrBayes. (not implemented yet)
     print('Running command:', command)
     with open(outpath + log_file, 'a') as log:
         a = Popen(shlex.split(command), stdout=log, stderr=log)
         a.wait()
     tree_code(seqfile + '.phy_phyml_tree.txt', sp_list, seqfile + '.phy_final_tree.txt')
     if args['gene_tree']:
-        aln_genes = [f for f in os.listdir(outpath) if ('.aln' in f and 'all' not in f and '.phy' not in f)]
+        aln_genes = [f for f in os.listdir(outpath) if ('.aln.fasta' in f and 'all' not in f and '.phy' not in f)]
         for gene_file in aln_genes:
             print(outpath+gene_file)
             tree_file = gene_tree(outpath + gene_file, protein, bootstrap, outpath + log_file)
@@ -268,19 +268,19 @@ def run_clustalw(outpath, protein=False):
             if not protein:
                 command = 'clustalo -INFILE=' + file_path +\
                           ' -ALIGN -OUTPUT=FASTA -OUTFILE='\
-                          + outpath + f.split('.')[0] + '_nuc.aln'
+                          + outpath + f.split('.')[0] + '_nuc.aln.fasta'
             else:
                 command = 'clustalo -INFILE=' + file_path +\
                           ' -ALIGN -TYPE=PROTEIN -OUTPUT=FASTA -OUTFILE='\
-                          + outpath + f.split('.')[0] + '_aa.aln'
+                          + outpath + f.split('.')[0] + '_aa.aln.fasta'
             if not protein:
                 command2 = 'clustalw -INFILE=' + file_path +\
                           ' -ALIGN -OUTPUT=FASTA -OUTFILE='\
-                          + outpath + f.split('.')[0] + '_nuc.aln'
+                          + outpath + f.split('.')[0] + '_nuc.aln.fasta'
             else:
                 command2 = 'clustalw -INFILE=' + file_path +\
                           ' -ALIGN -TYPE=PROTEIN -OUTPUT=FASTA -OUTFILE='\
-                          + outpath + f.split('.')[0] + '_aa.aln'
+                          + outpath + f.split('.')[0] + '_aa.aln.fasta'
             with open(outpath+'log_clustalw.txt', 'a') as log:
                 log.write(file_path + ' ' + command + '\n')
                 try:
@@ -293,9 +293,9 @@ def run_clustalw(outpath, protein=False):
 
 def join_seqs(path, protein=False):
     if protein:
-        end = '_aa.aln'
+        end = '_aa.aln.fasta'
     else:
-        end = '_nuc.aln'
+        end = '_nuc.aln.fasta'
     sp_dic = {} #Species dict, each mitogenome is one species.
     for f in os.listdir(path):
         if f.endswith(end) and 'all' not in f:
@@ -329,7 +329,7 @@ def fastatophy(infile, outfile, format_in='fasta', format_out='phylip', protein=
             raise
 
 def gene_tree(aln_file, protein, bootstrap, log_file):
-    
+   
     if protein:
         command = 'nohup phyml -d aa -m JTT -b ' + bootstrap + ' -v 0.0 -c 4 -a 4 -f m -i '
     else:
@@ -400,7 +400,7 @@ def run_bt_mito():
         genes.remove('DLOOP')
     except ValueError:
         pass
-    pairs = [(gene + '_aa.aln', gene + '.fasta', gene + '_codon.aln') for gene in genes]
+    pairs = [(gene + '_aa.aln.fasta', gene + '.fasta', gene + '_codon.aln.fasta') for gene in genes]
     for pair in pairs:
         file_handler(pair[0], pair[1], pair[2])
 

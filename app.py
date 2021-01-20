@@ -56,15 +56,15 @@ def template_root():
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
                 files.append(filename)
-		print('saving')
+                print('saving')
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             else:
                 print('file not allowed')
             if len(files) > 1:
-		print('setting parameters')
+                print('setting parameters')
                 session['job_id'] = shortuuid.uuid()
                 outpath = app.config['UPLOAD_FOLDER'] + session['job_id']+ '/'
-		print('making dir')
+                print('making dir')
                 os.mkdir(outpath)
                 args = default_args.copy()
                 args['inpath'] = app.config['UPLOAD_FOLDER']
@@ -91,7 +91,6 @@ def delete(filename):
         except:
             pass
             
-
 if __name__ == '__main__':
     app.run('127.0.0.1', 8000, debug=True)
 
