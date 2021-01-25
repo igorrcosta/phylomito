@@ -62,6 +62,10 @@ def argument_parser(hlp=False):
     parser.add_argument('-n', '--nucleotide', nargs='?', const=True, default=False,\
                         dest='nucleotide', help='Set this flag for nucleotide sequences\
                         alignment and phylogeny. Default use protein sequences.')
+    parser.add_argument('-s', '--skip_phyml', nargs='?', const=True, default=False,\
+                        dest='skip_phyml', help='Set this flag to skip the phylogenetic\
+                        tree reconstruction and stop the analysis after the alignment.\
+                        (default: %(default)s).')
     parser.add_argument('-g', '--gene_tree', nargs='?', const=True, default=False,\
                         dest='gene_tree', help='Set this flag if you want to make a\
                         tree for every gene. (default: %(default)s)')
@@ -86,7 +90,7 @@ def main(args):
     inpath = args['inpath']
     code_table = args['code_table']
     log_file = args['log']
-    skip_phyml = False
+    skip_phyml = args['skip_phyml']
     if not inpath.endswith('/'):
         inpath += '/'
     outpath = args['outpath']
