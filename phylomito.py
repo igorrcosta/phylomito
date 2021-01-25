@@ -59,9 +59,9 @@ def argument_parser(hlp=False):
     parser.add_argument('-b', '--bootstrap', nargs='?', type=int, default=100,\
                         dest='bootstrap', help='Number of bootstrap repetitions\
                         on PhyML. (default: %(default)s)')
-    parser.add_argument('-p', '--protein', nargs='?', const=True, default=False,\
-                        dest='protein', help='Set this flag for protein sequences\
-                        alignment and phylogeny. (default: %(default)s)')
+    parser.add_argument('-n', '--nucleotide', nargs='?', const=True, default=False,\
+                        dest='nucleotide', help='Set this flag for nucleotide sequences\
+                        alignment and phylogeny. Default use protein sequences.')
     parser.add_argument('-g', '--gene_tree', nargs='?', const=True, default=False,\
                         dest='gene_tree', help='Set this flag if you want to make a\
                         tree for every gene. (default: %(default)s)')
@@ -82,7 +82,7 @@ def argument_parser(hlp=False):
 
 def main(args):
     #Args processing.
-    protein = args['protein']
+    protein = not args['nucleotide']
     inpath = args['inpath']
     code_table = args['code_table']
     log_file = args['log']
@@ -154,19 +154,6 @@ def find_files(inpath, extensions):
             final_tree = tree_file.replace('_phyml_tree.txt', '_final_tree.txt')
             tree_code(tree_file, sp_list, final_tree)
                 
-def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
-    'if protein, translates to mitochondrial protein'
-    genes = deepcopy(KNOWN_GENES)
-    if not dloop and 'DLOOP' in genes:
-        genes.remove('DLOOP')
-    seq_dic = {gene:[] for gene in genes}
-    mitos = []
-    for ext in extensions:
-        mits = [mit for mit in os.listdir(inpath) if mit.endswith(ext)]
-        mitos += mits
-    mitos.sort()
-    return mitos
-
 def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
     'if protein, translates to mitochondrial protein'
     genes = deepcopy(KNOWN_GENES)
