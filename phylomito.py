@@ -92,6 +92,8 @@ def main(args):
     outpath = args['outpath']
     if not outpath.endswith('/'):
         outpath += '/'
+    if not os.path.isdir(outpath):
+        os.mkdir(outpath)
     extension = args['extension']
     dloop = args['dloop']
     bootstrap = str(args['bootstrap'])
@@ -182,6 +184,7 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
     size = 0
     sp_list = []
     present_genes = {gene:False for gene in genes}
+    mitos.sort()
     for n, f in enumerate(mitos):
         print('Reading genebank file:', f) #genebank file
         true_sp = ''
