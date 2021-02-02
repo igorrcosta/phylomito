@@ -256,7 +256,7 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
         a = open(outpath + gene + '.fasta', 'w')
         a.close()
         SeqIO.write(seq_dic[gene], outpath + gene + '.fasta', 'fasta')
-    with open('species_code.txt', 'w') as sp_file:
+    with open(outpath + 'species_code.txt', 'w') as sp_file:
         for n, sp in enumerate(sp_list):
             sp_file.write(str(n) + ' ' + sp + '\n')
     return sp_list
