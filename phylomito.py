@@ -69,6 +69,9 @@ def argument_parser(hlp=False):
     parser.add_argument('-g', '--gene_tree', nargs='?', const=True, default=False,\
                         dest='gene_tree', help='Set this flag if you want to make a\
                         tree for every gene. (default: %(default)s)')
+    parser.add_argument('-m', '--model', nargs='?', type=str, default='JTT',\
+                        dest='model', help='Substitution model to use with phyml.\
+                        default to GTR with nucleotide sequences and JTT with proteins. (default: %(default)s)')
     parser.add_argument('-d', '--dloop', nargs='?', const=True, default=False,\
                         dest='dloop', help='Flag to include DLOOP region in the\
                         alignment. (default: %(default)s)')
@@ -87,6 +90,10 @@ def argument_parser(hlp=False):
 def main(args):
     #Args processing.
     protein = not args['nucleotide']
+    if not protein and args['model'] == 'JTT':
+        model = 'GTR'
+    else:
+        model = args['model']
     inpath = args['inpath']
     code_table = args['code_table']
     log_file = args['log']
