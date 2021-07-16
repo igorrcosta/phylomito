@@ -4,9 +4,6 @@
 
 '''Mitochondrial phylogeny using the supermatrix method.'''
 
-from __future__ import print_function
-from __future__ import division
-
 __author__ = 'Igor Rodrigues da Costa'
 __contact__ = 'igor.bioinfo@gmail.com'
 
@@ -18,11 +15,9 @@ from builtins import str
 from builtins import range
 from subprocess import Popen
 from copy import deepcopy
-from past.utils import old_div
 from Bio import SeqIO#, AlignIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-from Bio.Alphabet import IUPAC, generic_dna
 
 
 GENES = [('ND1', 'NAD1'), ('ND2', 'NAD2'), ('COX1', 'CO1'), ('COX2', 'CO2'),
@@ -43,7 +38,7 @@ def argument_parser(hlp=False):
     default_out = os.getcwd() + '/'
     parser = argparse.ArgumentParser(description='Phylomito is a simple pipeline\
                                      to automatize mitochondrial super-matrix\
-                                     phylogenomic, using clustaw, phyML and mrbayes.',\
+                                     phylogenomic, using Clustal and PhyML.',\
                                      argument_default=None, fromfile_prefix_chars='@')
     parser.add_argument('-i', '--inpath', nargs='?', type=str, required=True,\
                         dest='inpath', help='Path to the folder with genbank\
@@ -87,7 +82,8 @@ def argument_parser(hlp=False):
         args = parser.parse_args().__dict__
     return args
 
-def main(args):
+def main():
+    args = argument_parser()
     #Args processing.
     protein = not args['nucleotide']
     if not protein and args['model'] == 'JTT':
@@ -202,7 +198,7 @@ def split_seqs(inpath, outpath, protein, extensions, table, dloop=False):
                     s = s.reverse_complement()
                 if protein:
                     if 'translation' in seq.qualifiers:
-                        s = Seq(seq.qualifiers['translation'][0], IUPAC.protein)
+                        s = Seq(seq.qualifiers['translation'][0])
                     else:
                         s = s.translate(table=table)
                 try:
@@ -316,11 +312,6 @@ def fastatophy(infile, outfile, format_in='fasta', format_out='phylip', protein=
     with open(infile, 'r') as handle:
         in_parsed = SeqIO.parse(handle, format_in)
         for seq in in_parsed:
-            if format_out == 'nexus':
-                if protein:
-                    seq.seq.alphabet = IUPAC.protein
-                else:
-                    seq.seq.alphabet = IUPAC.unambiguous_dna
             seq_records.append(seq)
     with open(outfile, 'w') as out:
         try:
@@ -359,7 +350,7 @@ def file_handler(aln_file, nuc_file, outfile, alphabet='Vertebrate Mitochondrial
         for nuc in SeqIO.parse(nuc_file, 'fasta'):
             if nuc.id == aln.id:
                 out = back_translate(aln, nuc, alphabet)
-                out_seq = Seq(out, generic_dna)
+                out_seq = Seq(out)
                 out_rec.append(SeqRecord(out_seq, id=nuc.id.split('_')[0],\
                                description=nuc.description.split('_')[0]))
     SeqIO.write(out_rec, outfile, 'fasta')
@@ -374,8 +365,8 @@ def back_translate(aln, nuc, alphabet):
     if len(nucl_seq)%3 != 0:
         print('Nucleotide sequence is not divisible by 3, removing excess nucleotides.')
         nucl_seq = nucl_seq[:-(len(nucl_seq)%3)]
-    if old_div(len(nucl_seq), 3) < len(str(prot_seq).replace('-', '')):
-        print(old_div(len(nucl_seq), 3), str(prot_seq).replace('-', ''))
+    if len(nucl_seq) // 3 < len(str(prot_seq).replace('-', '')):
+        print(len(nucl_seq) // 3, str(prot_seq).replace('-', ''))
         raise ValueError('Nucleotide sequence is smaller than protein sequence times 3!')
     for n, aa in enumerate(list(prot_seq)):
         if aa == '-':
@@ -417,5 +408,4 @@ def tree_code(tree_file, species_list, out_file):
         out.write(tree)    
 
 if __name__ == '__main__':
-    args_dict = argument_parser()
-    main(args_dict)
+    main()
